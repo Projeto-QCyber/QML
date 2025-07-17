@@ -12,7 +12,7 @@ from mysql.connector import Error
 API_URL = "http://127.0.0.1:5000/predict"
 
 # Intervalo de tempo entre as análises (em segundos)
-INTERVALO_DE_TEMPO = 10
+INTERVALO_DE_TEMPO = 60
 
 # Configurações do banco de dados MySQL
 DB_CONFIG = {
