@@ -2,22 +2,26 @@ from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 import datetime
+from dotenv import load_dotenv
+from utils import get_env_var
+
 
 app = Flask(__name__)
-
 CORS(app)
+load_dotenv()
 
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
-app.config['MYSQL_DB'] = 'monitoramento_qml'
-app.config['SECRET_KEY'] = 'sua-chave-secreta-aqui'
+app.config['MYSQL_HOST'] = get_env_var('APP_MYSQL_HOST')
+app.config['MYSQL_PORT'] = int(get_env_var('APP_MYSQL_PORT'))
+app.config['MYSQL_USER'] = get_env_var('APP_MYSQL_USER')
+app.config['MYSQL_PASSWORD'] = get_env_var('MYSQL_ROOT_PASSWORD')
+app.config['MYSQL_DB'] = get_env_var('APP_MYSQL_DB')
+app.config['SECRET_KEY'] = get_env_var('APP_SECRET_KEY')
 
 mysql = MySQL(app)
 
 
 # A rota de login não precisa de alterações
-@app.route('/api/login', methods=['POST'])
+@app.route('/api-interface/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email')
@@ -52,7 +56,7 @@ def login():
 
 
 # --- ROTA DE ANÁLISES ATUALIZADA ---
-@app.route('/api/analises', methods=['GET'])
+@app.route('/api-interface/analises', methods=['GET'])
 def get_analises():
     """
     Busca os registros da tabela de análises, garantindo que as datas

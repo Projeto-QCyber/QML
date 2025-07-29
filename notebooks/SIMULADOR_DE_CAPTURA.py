@@ -5,21 +5,26 @@ import json
 import time
 import mysql.connector
 from mysql.connector import Error
+from dotenv import load_dotenv
+from utils import get_env_var
 
+
+load_dotenv()
 # --- 1. CONFIGURAÇÕES ---
 
 # URL do endpoint da nossa API Flask de predição
 API_URL = "http://127.0.0.1:5000/predict"
 
 # Intervalo de tempo entre as análises (em segundos)
-INTERVALO_DE_TEMPO = 60
+INTERVALO_DE_TEMPO = 20
 
 # Configurações do banco de dados MySQL
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'root',
-    'database': 'monitoramento_qml'
+    'host': get_env_var('APP_MYSQL_HOST'),
+    'port': get_env_var('APP_MYSQL_PORT'),
+    'user': get_env_var('APP_MYSQL_USER'),
+    'password': get_env_var('MYSQL_ROOT_PASSWORD'),
+    'database': get_env_var('APP_MYSQL_DB')
 }
 
 # Lista de dados para simular a leitura em intervalos.

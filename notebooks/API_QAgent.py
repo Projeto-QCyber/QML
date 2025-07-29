@@ -72,7 +72,7 @@ app = Flask(__name__)
 
 # --- 4. CRIAÇÃO DO ENDPOINT DE PREDIÇÃO ---
 
-@app.route("/predict", methods=["POST"])
+@app.route("/api-quantum/predict", methods=["POST"])
 def predict():
     if not request.is_json:
         return jsonify({"erro": "Requisição inválida. O corpo deve ser um JSON."}), 400
@@ -139,6 +139,7 @@ def predict():
 # --- 5. EXECUÇÃO DO SERVIDOR ---
 
 if __name__ == "__main__":
-    print(">>> Servidor Flask está sendo executado em http://127.0.0.1:5000")
+    port = 5000
+    print(f">>> Servidor Flask está sendo executado em http://127.0.0.1:{port}")
     print(">>> Pressione CTRL+C para encerrar.")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
