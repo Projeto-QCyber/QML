@@ -49,3 +49,23 @@ CREATE TABLE qcyber_analises_vqc (
     INDEX idx_data_analise (data_analise)
 
 ) ENGINE=InnoDB;
+
+
+
+-- Seleciona a base de dados correta
+USE monitoramento_qml;
+
+-- Cria a tabela para armazenar os dispositivos monitorizados
+CREATE TABLE IF NOT EXISTS dispositivos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    host VARCHAR(100) NOT NULL UNIQUE, -- Host/IP deve ser único
+    localizacao VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'Ativo', -- Ex: Ativo, Inativo, Manutenção
+    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_nome (nome)
+) ENGINE=InnoDB;
+
+-- Mensagem de confirmação
+SELECT 'Tabela "dispositivos" criada com sucesso!' AS status;
+select * from dispositivos;
