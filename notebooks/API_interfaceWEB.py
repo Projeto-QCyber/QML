@@ -17,7 +17,7 @@ mysql = MySQL(app)
 
 
 # --- Rota de Login (sem alterações) ---
-@app.route('/api/login', methods=['POST'])
+@app.route('/api-interface/login', methods=['POST'])
 def login():
     # ... (código existente sem alterações)
     data = request.get_json()
@@ -45,7 +45,7 @@ def login():
 
 
 # --- ROTA DE KPIs ATUALIZADA (com filtro de data) ---
-@app.route('/api/dashboard-kpis', methods=['GET'])
+@app.route('/api-interface/dashboard-kpis', methods=['GET'])
 def get_dashboard_kpis():
     """
     Calcula e retorna as métricas chave (KPIs) para o topo do dashboard.
@@ -101,7 +101,7 @@ def get_dashboard_kpis():
 
 
 # --- ROTA DE ANÁLISES ATUALIZADA (com filtro de data) ---
-@app.route('/api/analises', methods=['GET'])
+@app.route('/api-interface/analises', methods=['GET'])
 def get_analises():
     """
     Busca os registros da tabela de análises com suporte a filtros e paginação.
@@ -169,7 +169,7 @@ def get_analises():
         return jsonify({'error': 'Erro ao buscar dados do banco'}), 500
 
 
-@app.route('/api/dispositivos', methods=['GET'])
+@app.route('/api-interface/dispositivos', methods=['GET'])
 def get_dispositivos():
     """Busca e retorna a lista de todos os dispositivos cadastrados."""
     try:
@@ -191,7 +191,7 @@ def get_dispositivos():
         return jsonify({'error': 'Erro ao buscar dados dos dispositivos.'}), 500
 
 
-@app.route('/api/dispositivos', methods=['POST'])
+@app.route('/api-interface/dispositivos', methods=['POST'])
 def create_dispositivo():
     """Cadastra um novo dispositivo no banco de dados."""
     data = request.get_json()
