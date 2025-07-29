@@ -72,7 +72,7 @@ app = Flask(__name__)
 
 # --- 4. CRIAÇÃO DO ENDPOINT DE PREDIÇÃO ---
 
-@app.route("/predict", methods=["POST"])
+@app.route("/api-quantum/predict", methods=["POST"])
 def predict():
     if not request.is_json:
         return jsonify({"erro": "Requisição inválida. O corpo deve ser um JSON."}), 400

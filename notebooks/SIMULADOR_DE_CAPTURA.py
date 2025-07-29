@@ -9,7 +9,7 @@ from mysql.connector import Error
 # --- 1. CONFIGURAÇÕES ---
 
 # URL do endpoint da nossa API Flask de predição
-API_URL = "http://127.0.0.1:5000/predict"
+API_URL = "http://127.0.0.1:5000/api-quantum/predict"
 
 # Intervalo de tempo entre as análises (em segundos)
 INTERVALO_DE_TEMPO = 10
