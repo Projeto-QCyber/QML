@@ -17,6 +17,9 @@ import uuid
 # Criar o executor que saberá como chamar a ferramenta
 tools = [vqc_predict]
 
+class Agent:
+    def
+
 # --- 1) Estado do agente ---
 class AgentState(TypedDict):
     messages: Annotated[List, operator.add]
