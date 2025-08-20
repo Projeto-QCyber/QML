@@ -11,7 +11,7 @@ def run():
     Run the research crew.
     """
     
-    data_path = "D:/Area de trabalho/Faculdade/BioData/Q-Cyber/QML/data/dados_de_teste.csv"
+    data_path = "./data/dados_de_teste.csv"
     """
     data = pd.read_csv(data_path).sample(10)
     sample_data_test = data.drop(["Attack_label"], axis=1)
