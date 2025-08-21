@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+.idea
 
 # Virtual environments
 .venv
@@ -12,4 +13,5 @@ wheels/
 # History
 .history
 
+# Env
 .env
