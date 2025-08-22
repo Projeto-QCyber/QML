@@ -6,9 +6,18 @@ def run():
     """
     Run the research crew.
     """
-    data_path = r"D:\Area de trabalho\Faculdade\BioData\Q-Cyber\QML\data\dados_de_teste.csv"
+    
+    data_path = "./data/dados_de_teste.csv"
+    """
+    data = pd.read_csv(data_path).sample(10)
+    sample_data_test = data.drop(["Attack_label"], axis=1)
+    sample_data_test = sample_data_test.reset_index(drop=True)
+    dictionary = sample_data_test.to_dict()
+    inputs = {
+        'argument': dictionary
+    }
+    """
 
-    # rode a crew
     result = CyberPredict().crew().kickoff(inputs=data_path)
 
     # RECOMENDADO: dê name="validate_results" no Task para identificar fácil

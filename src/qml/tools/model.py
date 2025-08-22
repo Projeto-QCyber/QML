@@ -22,7 +22,7 @@ class RFModel(BaseTool):
 
     def __init__(self, model_path: str = None, **kwargs):
         if model_path is None:
-            model_path = "D:/Area de trabalho/Faculdade/BioData/Q-Cyber/QML/IA/models/traditional/random_forest_model.joblib"
+            model_path = "./IA/models/traditional/random_forest_model.joblib"
         
         loaded_model = joblib.load(model_path)
 
@@ -44,7 +44,7 @@ class RFModel(BaseTool):
 if __name__ == "__main__":
     # 1. Instantiate the tool
     # Make sure to have the model file at this path for the test
-    model_path_to_test = "D:/Area de trabalho/Faculdade/BioData/Q-Cyber/QML/IA/models/traditional/random_forest_model.joblib"
+    model_path_to_test = "./IA/models/traditional/random_forest_model.joblib"
     rf_tool = RFModel(model_path=model_path_to_test)
     
     # 2. Create a sample input dictionary that matches the expected format
