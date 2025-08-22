@@ -3,10 +3,12 @@ from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_ki
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 
+import numpy as np
 import pandas as pd
 
-from models.agents_traditional import Specialist
+from schemas.agents_traditional import Specialist
 from qml.tools.model import RFModel
+from qml.utils.run_model import predict_model
 
 @CrewBase
 class CyberPredict:
@@ -20,17 +22,24 @@ class CyberPredict:
 
     @before_kickoff
     def prepare_inputs(self, input_path):
-        data = pd.read_csv(input_path).sample(10)
-        
-        sample_data_test = data.drop(["Attack_label"], axis=1)
-        sample_data_test = sample_data_test.reset_index(drop=True)
-        dictionary = sample_data_test.to_dict(orient='list')
-        
-        inputs = {
-            'argument': dictionary
-        }
-        
-        return inputs
+        df = pd.read_csv(input_path).sample(10, random_state=42)
+        df_with_index = df.reset_index(drop=False)
+        df_with_index.rename(columns={"index": "id"}, inplace=True)
+
+        np_predictions, y_true, X = predict_model(df)
+        baseline = pd.Series(np_predictions, index=df.index).astype(int)
+        print(df_with_index)
+        # Monte a lista de exemplos
+        examples = []
+        for i, row in df_with_index.iterrows():
+            examples.append({
+                "id": int(row["id"]),
+                "y_true": int(y_true.loc[i]),
+                "baseline_pred": int(baseline.loc[i]),
+                "features": X.loc[i].to_dict(),
+            })
+
+        return {"examples": examples}
 
     @after_kickoff
     def process_output(self, output):
@@ -41,7 +50,7 @@ class CyberPredict:
     def cybersecurity_analyst_1(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_1'],
-            tools=[RFModel()],
+            #tools=[RFModel()],
             llm=LLM(
                 model="ollama/qwen2.5:3b",
                 base_url="http://localhost:11434"
@@ -53,7 +62,7 @@ class CyberPredict:
     def cybersecurity_analyst_2(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_2'],
-            tools=[RFModel()],
+            #tools=[RFModel()],
             llm=LLM(
                 model="ollama/qwen2.5:3b",
                 base_url="http://localhost:11434"
@@ -91,7 +100,7 @@ class CyberPredict:
         description="Especialista valida os votos e emite o resultado final.",
         agent=self.cybersecurity_specialist(),
         context=[self.analyze_and_vote_1(), self.analyze_and_vote_2()],
-        output_file='final_prediction.txt',
+        output_file='./output/final_prediction.txt',
         output_pydantic=Specialist
       )
 

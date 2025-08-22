@@ -1,21 +1,20 @@
 analyze_and_vote_1:
  description: >
-      Analyze the 10 network data samples provided. Use your prediction tool
-      to vote on whether each sample represents a cyberattack. The vote should
-      be binary: 1 for attack, 0 for normal.
-      The data for analysis is: {argument}
+      Analyze the 10 network data samples result provided by Random Forest Model.
+      to vote on whether each sample represents a cyberattack. You must analyse the 
+      results and to vote of the way binary: 1 for attack, 0 for normal.
+      The data for analysis is: {examples}
  expected_output: >
       A list of 10 binary votes, one for each sample. Example: \n
       [1, 0, 1, 1, 0, 0, 1, 0, 0, 1]
-  
  agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
  description: >
-      Analyze the 10 network data samples provided independently.
-      Use your prediction tool to vote on whether each sample represents a cyberattack.
+      Analyze the 10 network data samples result provided independently.
+      Use your expertise to vote on whether each result represents a cyberattack.
       The vote must be binary: 1 for attack, 0 for normal.
-      The data for analysis is: {argument}
+      The data for analysis is: {examples}
  expected_output: >
       A list of 10 binary votes, one for each sample. Example: [1, 0, 1, 1, 0, 0, 1, 0, 0, 1]
  agent: cybersecurity_analyst_2
@@ -23,14 +22,29 @@ analyze_and_vote_2:
 validate_results:
  description: >
       You have received the votes of two analysts on whether 10 samples of
-      network data represent a cyberattack.
+      network result data represent a cyberattack.
       
       The first analyst's votes are: {analyst_1_votes}.
       The second analyst's votes are: {analyst_2_votes}.
       
-      Analyze the votes and issue a final verdict for each of the 10 samples.
+      Analyze the votes for each sample result and issue a final verdict for each of the 10 samples.
       If the two votes agree, use the consensus. If there is disagreement, use 
       your own expert judgment to decide the outcome.
  expected_output: >
       A list of 10 final binary votes, one for each sample. Example: [1, 0, 1, 1, 0, 0, 1, 0, 0, 1]
  agent: cybersecurity_specialist
+
+validate_results:
+ description: |
+     You are the expert. You are given a list of "examples" where each item has "id", "y_true" and "baseline_pred".
+     Your task: decide "final_pred" (integer) for EACH item and return a valid JSON in the format:
+     {
+     "predictions": [{ "id": <int>, "y_true": <int>, "baseline_pred": <int>, "final_pred": <int>, "rationale": "<short>"}],
+     "report": "<text summary>"
+     }
+     Rules:
+     - Keep id, y_true and baseline_pred exactly as they came.
+     - Fill in final_pred with your final decision (0/1 or the class).
+     - Don't invent new fields.
+     - JSON should be the only output content.
+ expected_output: strict-json
