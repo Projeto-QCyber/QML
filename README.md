@@ -10,22 +10,28 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-##### Baixando dependencias e subindo APIs
-1-
+### Configurando o ambiente (.venv) com uv
+
+1- Criar um ambiente virtual (python-version: >=3.10,< 3.14)
+```
+uv venv --python==3.13
+```
+
+2- Entrar no ambiente recém criado
+```
+# Linux e MacOS
+source .venv/bin/activate
+```
+
+```
+# On Windows.
+.venv/Scripts/activate
+```
+
+3- Sincronizar as bibliotecas
 ```
 uv sync
 ```
-2- Ativar ambiente virual
-3-
-```
-cd notebooks/
-```
-4-
-```
-python API_***.py
-```
-
-
 
 ### Estrutura do .env:
 
