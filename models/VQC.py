@@ -15,11 +15,11 @@ class VQC():
             print("Numero de qubits eh exatamente igual ao numero de dimensoes do dataset")
         else:
             print("Numero de qubits eh menor que o numero de dimensoes do dataset")
+    
     dev = qml.device("default.qubit", wires=self.n_qubits)
 
     # quantum circuit functions
     def statepreparation(self, x):
-        #qml.BasisEmbedding(x, wires=range(0, num_qubits))
         qml.AngleEmbedding(x, wires=range(self.n_qubits), rotation='Y')
 
     def layer(self, W):
@@ -35,14 +35,12 @@ class VQC():
             qml.CNOT(wires=[1, 2])
         if self.n_qubits >= 4:
             qml.CNOT(wires=[2, 3])
-        if self.n_qubits >= 1 and self.n_qubits != 0: # Ensure at least 1 qubit before this
-            qml.CNOT(wires=[self.n_qubits - 1, 0]) # Wrap around CNOT
+        if self.n_qubits >= 1 and self.n_qubits != 0:
+            qml.CNOT(wires=[self.n_qubits - 1, 0])
 
     @qml.qnode(dev, interface="autograd")
     def circuit(self, weights, x):
-
         self.statepreparation(x)
-
         for W in weights:
             self.layer(W)
 

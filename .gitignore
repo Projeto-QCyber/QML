@@ -5,11 +5,13 @@ build/
 dist/
 wheels/
 *.egg-info
+.idea/
 
 # Virtual environments
 .venv
 
 # History
-.history
+.history/
 
+# Env
 .env
