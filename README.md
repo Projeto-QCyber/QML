@@ -1,5 +1,5 @@
-### Setup
-##### Instalar o uv
+## Setup
+### Instalar o uv
 ```
 # Linux e MacOS
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -14,7 +14,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 1- Criar um ambiente virtual (python-version: >=3.10,< 3.14)
 ```
-uv venv --python==3.13
+uv venv --python=3.13
 ```
 
 2- Entrar no ambiente recém criado
