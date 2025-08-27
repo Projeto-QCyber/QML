@@ -1,18 +1,13 @@
-# Em src/qml/tools/model.py
-
-import json
 import joblib
 import pandas as pd
 from typing import List, Dict, Any, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-# Define o formato do input que a ferramenta espera
 class RFModelInput(BaseModel):
     """Input schema for RFModel for batch predictions."""
     samples: List[Dict[str, Any]] = Field(..., description="A list of network data samples (as dictionaries) to be used for prediction.")
 
-# Define a ferramenta
 class RFModel(BaseTool):
     name: str = "Model"
     description: str = """
@@ -22,15 +17,13 @@ class RFModel(BaseTool):
     args_schema: Type[BaseModel] = RFModelInput
     model: object
 
-    # --- FUNÇÃO __init__ CORRIGIDA ---
     def __init__(self, model_path: str = None, **kwargs):
         # 1. Primeiro, carregamos o modelo joblib em uma variável
         if model_path is None:
-            model_path = "IA/models/traditional/random_forest_model.joblib"
+            model_path = "IA/weights/traditional/random_forest_model.joblib"
         loaded_model = joblib.load(model_path)
 
-        # 2. Depois, chamamos o construtor pai (super) passando o modelo já carregado.
-        #    Isso satisfaz a validação do Pydantic.
+        # A ferramenta RFModel herda todos os métodos do modelo carregado usando joblib
         super().__init__(model=loaded_model, **kwargs)
 
     def _run(self, samples: List[Dict[str, Any]]) -> str:

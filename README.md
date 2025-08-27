@@ -33,6 +33,22 @@ source .venv/bin/activate
 uv sync
 ```
 
+### Inicializando o projeto
+
+1 - Certifique-se de estar exatamente na raiz do projeto. Existem duas opções de você executar o fluxo:
+
+```
+# Primeira opção: 
+crewai run
+
+# Segunda opção:
+# Executando diretamente o arquivo main.py
+
+".../.venv/Scripts/python.exe" ".../QML/src/qml/main.py"
+```
+
+
+
 ### Estrutura do .env:
 
 ```
