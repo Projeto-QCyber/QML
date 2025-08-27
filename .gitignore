@@ -11,7 +11,10 @@ wheels/
 .venv
 
 # History
-.history
+.history/
 
 # Env
 .env
+
+# .idea
+.idea/

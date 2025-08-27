@@ -1,13 +1,9 @@
 import pennylane as qml
-from pennylane import numpy as np
-from pennylane.optimize import AdamOptimizer
 
 class VQC():
     def __init__(self, n_qubits:int = None, n_layers:int = 3, data_shape:tuple = ()):
-
         self.n_qubits = n_qubits
         self.n_layers = n_layers
-    
         if self.n_qubits > data_shape[1]:
             print("Numero de qubits deve ser <= que o numero de dimensoes do dataset")
             return
@@ -15,8 +11,9 @@ class VQC():
             print("Numero de qubits eh exatamente igual ao numero de dimensoes do dataset")
         else:
             print("Numero de qubits eh menor que o numero de dimensoes do dataset")
-    dev = qml.device("default.qubit", wires=self.n_qubits)
 
+        self.dev = qml.device("default.qubit", wires=self.n_qubits)
+        
     # quantum circuit functions
     def statepreparation(self, x):
         #qml.BasisEmbedding(x, wires=range(0, num_qubits))
@@ -72,5 +69,3 @@ class VQC():
     def cost(self, weights, bias, X, Y):
         predictions = [self.variational_classifier(weights, bias, x) for x in X]
         return self.square_loss(Y, predictions)
-    
-    def predict():

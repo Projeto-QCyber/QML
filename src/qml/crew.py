@@ -1,11 +1,9 @@
 from crewai import LLM, Agent, Crew, Task, Process
-from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
+from crewai.project import CrewBase, agent, task, crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 
-import pandas as pd
-
-from models.agents_traditional import Specialist
+from qml.schemas.agents_roles import Specialist
 from qml.tools.model import RFModel
 
 @CrewBase
@@ -17,12 +15,6 @@ class CyberPredict:
 
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
-
-
-    #@after_kickoff
-    #def process_output(self, output):
-    #    output.raw += "\nProcessed after kickoff."
-    #    return output
 
     @agent
     def cybersecurity_analyst_1(self) -> Agent:
@@ -78,18 +70,12 @@ class CyberPredict:
         description="Especialista valida os votos e emite o resultado final.",
         agent=self.cybersecurity_specialist(),
         context=[self.analyze_and_vote_1(), self.analyze_and_vote_2()],
-        output_file='final_prediction.txt',
+        output_file='src/qml/output/final_prediction.txt',
         output_pydantic=Specialist
       )
 
     @crew
     def crew(self) -> Crew:
-        #return Crew(
-        #    agents=[self.cybersecurity_analyst_1()],
-        #    tasks=[self.analyze_and_vote_1()], 
-        #    process=Process.sequential,
-        #    verbose=True
-        #)
         return Crew(
             agents=self.agents,
             tasks=self.tasks, 
