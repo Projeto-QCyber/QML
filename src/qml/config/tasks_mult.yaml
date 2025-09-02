@@ -1,0 +1,128 @@
+analyze_and_vote_mitm:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to analyze the entire batch for Man-in-the-Middle (MITM) attack patterns.
+    Pass the complete list of samples directly to the 'samples' parameter of the tool.
+  expected_output: >
+    A list of 20 binary votes (1 for MITM attack, 0 for other attack), one for each sample.
+    Example: [1, 0, 1, ..., 0, 1]
+  agent: cybersecurity_specialist_mitm
+
+analyze_and_vote_fingerprinting:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to analyze the entire batch for Fingerprinting attack attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for Fingerprinting, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_fingerprinting
+
+analyze_and_vote_ransomware:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect ransomware-related activity across all samples.
+  expected_output: >
+    A list of 20 binary votes (1 for ransomware, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_ransomware
+
+analyze_and_vote_uploading:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect malicious file uploading attempts across all samples.
+  expected_output: >
+    A list of 20 binary votes (1 for uploading attack, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_uploading
+
+analyze_and_vote_sql_injection:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to analyze abnormal query patterns and detect SQL injection attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for SQL injection, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_sql_injection
+
+analyze_and_vote_ddos_http:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect HTTP flood patterns indicative of DDoS HTTP attacks.
+  expected_output: >
+    A list of 20 binary votes (1 for DDoS HTTP, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_ddos_http
+
+analyze_and_vote_ddos_tcp:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to analyze TCP traffic anomalies for signs of TCP-based DDoS.
+  expected_output: >
+    A list of 20 binary votes (1 for DDoS TCP, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_ddos_tcp
+
+analyze_and_vote_password:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect brute force or credential-stuffing attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for password attack, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_password
+
+analyze_and_vote_port_scanning:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to identify probing and port scanning attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for port scanning, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_port_scanning
+
+analyze_and_vote_vulnerability_scanner:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect automated vulnerability scanning activity.
+  expected_output: >
+    A list of 20 binary votes (1 for vulnerability scanning, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_vulnerability_scanner
+
+analyze_and_vote_backdoor:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect backdoor communications or persistence attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for backdoor, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_backdoor
+
+analyze_and_vote_xss:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to identify Cross-Site Scripting (XSS) payload attempts.
+  expected_output: >
+    A list of 20 binary votes (1 for XSS, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_xss
+
+analyze_and_vote_ddos_udp:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect UDP flood signatures typical of DDoS UDP attacks.
+  expected_output: >
+    A list of 20 binary votes (1 for DDoS UDP, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_ddos_udp
+
+analyze_and_vote_ddos_icmp:
+  description: >
+    You have been provided with a list of 20 network data samples: {samples}.
+    Use the 'Model' tool to detect abother attack ICMP patterns indicative of DDoS ICMP attacks.
+  expected_output: >
+    A list of 20 binary votes (1 for DDoS ICMP, 0 for other attack), one for each sample.
+  agent: cybersecurity_specialist_ddos_icmp
+
+final_evaluation_task:
+  description: >
+    You have been provided with the binary votes and justifications from all 14
+    cybersecurity specialists for the same 20 samples. Your job is to evaluate
+    their decisions, compare consistency, and decide the most appropriate final
+    classification for each sample.
+  expected_output: >
+    JSON with two keys:
+    - "predictions": array of 20 final labels among
+      ["MITM","Fingerprinting","Ransomware","Uploading","SQL_injection",
+       "DDoS_HTTP","DDoS_TCP","Password","Port_Scanning","Vulnerability_scanner",
+       "Backdoor","XSS","DDoS_UDP","DDoS_ICMP"] in the same order as input samples.
+    - "report": short rationale (3-6 sentences) explaining how conflicts were resolved.
+  agent: cybersecurity_team_leader

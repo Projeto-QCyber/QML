@@ -18,7 +18,6 @@ analyze_and_vote_2:
     Example: [1, 0, 1, ..., 0, 1]
   agent: cybersecurity_analyst_2
 
-
 validate_results:
  description: >
       You have received the votes of two analysts on whether 20 samples of
