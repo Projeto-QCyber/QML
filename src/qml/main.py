@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 
 from qml.crew import CyberPredict
@@ -25,7 +26,15 @@ def run():
 
     try:
         result_bin = CyberPredict().crew().kickoff(inputs=inputs_for_crew)
-        bin_output = result_bin.raw
+        
+        # Forçar conversão para dicionário
+        if isinstance(result_bin.raw, str):
+            bin_output = json.loads(result_bin.raw)
+        elif hasattr(result_bin, "dict"):
+            bin_output = result_bin.model_dump()
+        else:
+            bin_output = result_bin.raw
+
         # Agora, pegamos a lista de predições de dentro do dicionário
         print("-----------------BINARY-----------------")
         print("\n\n--- COMPARAÇÃO (PREDICT vs. GROUND TRUTH) ---")
@@ -34,7 +43,11 @@ def run():
         print(f"Resultado Bruto da Crew (Predict): {bin_output}")
         print("-------------------------------------------------")
 
-        result_mult = CyberPredictMult().crew().kickoff(inputs=bin_output.predictions)
+        inputs_for_mult_crew = {
+            'samples': bin_output.predictions
+        }
+
+        result_mult = CyberPredictMult().crew().kickoff(inputs=inputs_for_mult_crew)
         mult_output = result_mult.raw
 
         print("-----------------MULTICLASS-----------------")
