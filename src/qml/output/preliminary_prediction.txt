@@ -1,1 +1,1 @@
-{"predictions":[1,0,1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0,0,1],"report":"The predictions for each sample have been validated and confirmed. The final binary votes are as follows: [1, 0, 1, ..., 0, 1]."}
+{"predictions":[1,0,1,0,0,1,1,0,1,0,0,1,0,1,0,1,0,0,1,0],"report":"The binary votes for each sample have been determined based on the analysis of the provided TCP packets. The final list of predictions is as follows: [1, 0, 1, ..., 0, 1]."}

@@ -1,28 +1,29 @@
 import json
+import numpy as np
 import pandas as pd
 from collections.abc import Mapping
 
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
+from qml.utils.decode import decode_type_attack
 
 def run():
     """
     Executa a crew e avalia seu desempenho.
     """
-    data_path_bin = "data/dados_de_teste_bin.csv"
-    data_path_mult = "data/dados_de_teste_mult.csv"
+    data_path = "data/dados_de_teste.csv"
 
-    sampled_data_bin = pd.read_csv(data_path_bin).sample(20, random_state=42)
-    sampled_data_mult = pd.read_csv(data_path_mult).sample(20, random_state=42)
+    sampled_data = pd.read_csv(data_path).sample(20, random_state=42)
 
-    gt_bin_labels = sampled_data_bin["Attack_label"].tolist()
-    gt_mult_labels = sampled_data_mult["Attack_type"].tolist()
+    gt_bin_labels = sampled_data["Attack_label"].tolist()
+    gt_mult_labels = sampled_data["Attack_type"].tolist()
 
-    sample_data_test = sampled_data_bin.drop(["Attack_label"], axis=1)
-    sample_data_test = sample_data_test.reset_index(drop=True)
-    input_records = sample_data_test.to_dict(orient='records')
+    x_test = sampled_data.drop(["Attack_label", "Attack_type"], axis=1)
+    x_test = x_test.reset_index(drop=True)
+    input_records = x_test.to_dict(orient='records')
+
     inputs_for_crew = {
-        'samples': input_records # Trocamos 'argument' por 'samples'
+        'samples': input_records
     }
 
     try:
@@ -44,7 +45,14 @@ def run():
         print(f"Resultado Bruto da Crew (Predict): {bin_output}")
         print("-------------------------------------------------")
 
-        inputs_for_mult_crew = {"samples": bin_output["predictions"]}
+        # Preparando dados para passar como input para o modelo multiclasse
+        attack_index = np.where(bin_output["predictions"] == 1)[0]
+        x_test_mult = x_test.loc[attack_index]
+        gt_mult_labels_filtered = [gt_mult_labels[i] for i in attack_index]
+
+        input_records_mult = x_test_mult.to_dict(orient='records')
+
+        inputs_for_mult_crew = {"samples": input_records_mult}
 
         # Extra guard rails for the "'function' has no attribute 'get'"
         assert isinstance(inputs_for_mult_crew, Mapping), "inputs_for_mult_crew must be a dict"
@@ -56,8 +64,9 @@ def run():
         print("-----------------MULTICLASS-----------------")
         print("\n\n--- COMPARAÇÃO (PREDICT vs. GROUND TRUTH) ---")
         print(f"Type of output:     {type(mult_output)}")
-        print(f"Valores Reais (Ground Truth):     {gt_mult_labels}")
+        print(f"Valores Reais (Ground Truth):     {gt_mult_labels_filtered}")
         print(f"Resultado Bruto da Crew (Predict): {mult_output}")
+        decode_type_attack(mult_output["predictions"])
         print("-------------------------------------------------")
 
     except Exception as e:
