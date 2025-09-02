@@ -1,0 +1,1 @@
+{"predictions":[1,0,0,4],"report":"Predicted MITM attack\nPredicted low port connection\nPredicted low port connection\nPredicted SQL_injection"}
