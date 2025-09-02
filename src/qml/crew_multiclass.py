@@ -8,18 +8,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 # Your custom schema for the leader's final structured output
 from qml.schemas.agents_roles import Specialist  # keep your Pydantic model
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
-
-
-# -----------------------------------------------------------------------------
-# Helper factories to avoid duplication
-# -----------------------------------------------------------------------------
-def _llm_default() -> LLM:
-    """Default LLM endpoint used by specialists."""
-    return LLM(
-        model="ollama/qwen2.5:3b", 
-        base_url="http://localhost:11434"
-    )
-
+from qml.utils.api_call_models import _llm_default, _llm_leader
 
 def _rf_tool_multiclass() -> RFModel:
     """RF model tool configured for multiclass classification."""
@@ -190,7 +179,7 @@ class CyberPredictMult:
     def cybersecurity_team_leader(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_team_leader'],
-            llm=_llm_default(),
+            llm=_llm_leader(),
             verbose=True,
             allow_delegation=True,
             max_iter=1             

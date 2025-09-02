@@ -5,6 +5,7 @@ from typing import List
 
 from qml.schemas.agents_roles import Specialist
 from qml.tools.model import RFModel
+from qml.utils.api_call_models import _llm_default, _llm_leader
 
 @CrewBase
 class CyberPredict:
@@ -21,10 +22,7 @@ class CyberPredict:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_1'],
             tools=[RFModel()],
-            llm=LLM(
-                model="ollama/qwen2.5:3b",
-                base_url="http://localhost:11434"
-            ),
+            llm=_llm_default(),
             verbose=True
         )
 
@@ -33,10 +31,7 @@ class CyberPredict:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_2'],
             tools=[RFModel()],
-            llm=LLM(
-                model="ollama/qwen2.5:3b",
-                base_url="http://localhost:11434"
-            ),
+            llm=_llm_default(),
             verbose=True,
         )
 
@@ -44,10 +39,7 @@ class CyberPredict:
     def cybersecurity_specialist(self) -> Agent:
       return Agent(
         config=self.agents_config['cybersecurity_specialist'],
-        llm=LLM(
-            model="ollama/qwen2.5:3b",
-            base_url="http://localhost:11434"
-        ),
+        llm=_llm_leader(),
         verbose=True
       )
 
