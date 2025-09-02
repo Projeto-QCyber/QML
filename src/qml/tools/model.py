@@ -20,7 +20,7 @@ class RFModel(BaseTool):
     def __init__(self, model_path: str = None, **kwargs):
         # 1. Primeiro, carregamos o modelo joblib em uma variável
         if model_path is None:
-            model_path = "IA/weights/traditional/random_forest_model.joblib"
+            model_path = "C:\\Users\\pedro\\Documents\\PROJETOS\\QML\\IA\\weights\\traditional\\random_forest_model.joblib"
         loaded_model = joblib.load(model_path)
 
         # A ferramenta RFModel herda todos os métodos do modelo carregado usando joblib

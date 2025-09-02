@@ -6,9 +6,9 @@ def run():
     """
     Executa a crew e avalia seu desempenho.
     """
-    data_path = "data/dados_de_teste.csv"
+    data_path = "C:\\Users\\pedro\\Documents\\PROJETOS\\QML\\data\\dados_de_teste.csv"
 
-    sampled_data = pd.read_csv(data_path).sample(20, random_state=42)
+    sampled_data = pd.read_csv(data_path).sample(3, random_state=42)
 
     ground_truth_labels = sampled_data["Attack_label"].tolist()
 
