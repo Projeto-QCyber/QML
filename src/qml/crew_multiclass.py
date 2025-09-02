@@ -15,7 +15,10 @@ from qml.tools.model import RFModel              # your tool (RandomForest model
 # -----------------------------------------------------------------------------
 def _llm_default() -> LLM:
     """Default LLM endpoint used by specialists."""
-    return LLM(model="ollama/qwen2.5:3b", base_url="http://localhost:11434")
+    return LLM(
+        model="ollama/qwen2.5:3b", 
+        base_url="http://localhost:11434"
+    )
 
 
 def _rf_tool_multiclass() -> RFModel:
@@ -300,19 +303,19 @@ class CyberPredictMult:
         """
         return Crew(
             agents=[
-                self.cybersecurity_specialist_backdoor,
-                self.cybersecurity_specialist_fingerprinting,
-                self.cybersecurity_specialist_ransomware,
-                self.cybersecurity_specialist_uploading,
-                self.cybersecurity_specialist_sql_injection,
-                self.cybersecurity_specialist_ddos_http,
-                self.cybersecurity_specialist_ddos_tcp,
-                self.cybersecurity_specialist_password,
-                self.cybersecurity_specialist_port_scanning,
-                self.cybersecurity_specialist_vulnerability_scanner,
-                self.cybersecurity_specialist_xss,
-                self.cybersecurity_specialist_ddos_udp,
-                self.cybersecurity_specialist_ddos_icmp,
+                self.cybersecurity_specialist_backdoor(),
+                self.cybersecurity_specialist_fingerprinting(),
+                self.cybersecurity_specialist_ransomware(),
+                self.cybersecurity_specialist_uploading(),
+                self.cybersecurity_specialist_sql_injection(),
+                self.cybersecurity_specialist_ddos_http(),
+                self.cybersecurity_specialist_ddos_tcp(),
+                self.cybersecurity_specialist_password(),
+                self.cybersecurity_specialist_port_scanning(),
+                self.cybersecurity_specialist_vulnerability_scanner(),
+                self.cybersecurity_specialist_xss(),
+                self.cybersecurity_specialist_ddos_udp(),
+                self.cybersecurity_specialist_ddos_icmp(),
             ],
             tasks=self.tasks,
             process=Process.hierarchical,             # leader-managed deliberation

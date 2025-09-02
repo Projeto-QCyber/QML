@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from collections.abc import Mapping
 
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
@@ -38,14 +39,16 @@ def run():
         # Agora, pegamos a lista de predições de dentro do dicionário
         print("-----------------BINARY-----------------")
         print("\n\n--- COMPARAÇÃO (PREDICT vs. GROUND TRUTH) ---")
-        print(f"Type of output:     {type(bin_output)}")
+        print(f"Vizualizando predições:     {bin_output["predictions"]}")
         print(f"Valores Reais (Ground Truth):     {gt_bin_labels}")
         print(f"Resultado Bruto da Crew (Predict): {bin_output}")
         print("-------------------------------------------------")
 
-        inputs_for_mult_crew = {
-            'samples': bin_output.predictions
-        }
+        inputs_for_mult_crew = {"samples": bin_output["predictions"]}
+
+        # Extra guard rails for the "'function' has no attribute 'get'"
+        assert isinstance(inputs_for_mult_crew, Mapping), "inputs_for_mult_crew must be a dict"
+        assert "samples" in inputs_for_mult_crew, "missing 'samples' key for multiclass inputs"
 
         result_mult = CyberPredictMult().crew().kickoff(inputs=inputs_for_mult_crew)
         mult_output = result_mult.raw

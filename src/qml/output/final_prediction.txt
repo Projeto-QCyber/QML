@@ -1,1 +1,0 @@
-{"predictions":[0,1,0,1,0,1,0,1,0,1],"report":"Based on a simplified logic where predictions are made if any TCP flag value is greater than 127, these are the resulting binary votes: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]."}
