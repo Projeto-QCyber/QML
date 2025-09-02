@@ -7,7 +7,7 @@ cybersecurity_specialist_mitm:
     You are a senior cybersecurity analyst with deep expertise in identifying
     MITM attacks by analyzing packet interception, altered certificates,
     suspicious TLS handshakes, and anomalous routing patterns. You cast a binary
-    vote (1 for attack, 0 for normal) for each sample.
+    vote (1 for MITM attack, 0 for another attack) for each sample.
 
 cybersecurity_specialist_fingerprinting:
   role: >
@@ -150,6 +150,5 @@ cybersecurity_team_leader:
     Your job is not to cast an independent vote at first, but to carefully evaluate
     the responses of all 14 specialists. You compare their judgments, validate their
     consistency, and select the final classification that best matches the attack
-    type or normal traffic. If conflicting answers arise, you analyze the reasoning,
-    discard unreliable votes, and ensure the decision is aligned with realistic
-    cybersecurity scenarios.
+    type. If conflicting answers arise, you analyze the reasoning, discard unreliable 
+    votes, and ensure the decision is aligned with realistic cybersecurity scenarios.
