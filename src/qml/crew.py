@@ -70,7 +70,7 @@ class CyberPredict:
         description="Especialista valida os votos e emite o resultado final.",
         agent=self.cybersecurity_specialist(),
         context=[self.analyze_and_vote_1(), self.analyze_and_vote_2()],
-        output_file='src/qml/output/final_prediction.txt',
+        output_file='src/qml/output/preliminary_prediction.txt',
         output_pydantic=Specialist
       )
 
@@ -81,6 +81,3 @@ class CyberPredict:
             tasks=self.tasks, 
             process=Process.sequential,
             verbose=True)
-    
-
-    

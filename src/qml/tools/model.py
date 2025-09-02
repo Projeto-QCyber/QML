@@ -1,6 +1,6 @@
 import joblib
 import pandas as pd
-from typing import List, Dict, Any, Type
+from typing import List, Dict, Any, Literal, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -17,10 +17,15 @@ class RFModel(BaseTool):
     args_schema: Type[BaseModel] = RFModelInput
     model: object
 
-    def __init__(self, model_path: str = None, **kwargs):
-        # 1. Primeiro, carregamos o modelo joblib em uma variável
-        if model_path is None:
-            model_path = "IA/weights/traditional/random_forest_model.joblib"
+    def __init__(self, model_path: str = None, classification: Literal["multiclass", "binary"] = "binary", **kwargs):
+        if classification == "multiclass":
+            model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
+        elif classification == "binary" and model_path is None:
+            model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
+        
+        if model_path is not None:
+            model_path = model_path
+
         loaded_model = joblib.load(model_path)
 
         # A ferramenta RFModel herda todos os métodos do modelo carregado usando joblib
