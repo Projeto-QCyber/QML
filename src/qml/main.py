@@ -13,7 +13,7 @@ def run():
     """
     data_path = "data/dados_de_teste.csv"
 
-    sampled_data = pd.read_csv(data_path).sample(20, random_state=42)
+    sampled_data = pd.read_csv(data_path).sample(5, random_state=42)
 
     gt_bin_labels = sampled_data["Attack_label"].tolist()
     gt_mult_labels = sampled_data["Attack_type"].tolist()
@@ -31,6 +31,7 @@ def run():
         
         # Forçar conversão para dicionário
         if isinstance(result_bin.raw, str):
+            print(f"Entendendo o result_bin.raw: {result_bin.raw}")
             bin_output = json.loads(result_bin.raw)
         elif hasattr(result_bin, "dict"):
             bin_output = result_bin.model_dump()
@@ -46,10 +47,11 @@ def run():
         print("-------------------------------------------------")
 
         # Preparando dados para passar como input para o modelo multiclasse
-        attack_index = np.where(bin_output["predictions"] == 1)[0]
+        bin_output_ndarray = np.array(bin_output["predictions"])
+        attack_index = np.where(bin_output_ndarray == 1)[0]
         x_test_mult = x_test.loc[attack_index]
+        
         gt_mult_labels_filtered = [gt_mult_labels[i] for i in attack_index]
-
         input_records_mult = x_test_mult.to_dict(orient='records')
 
         inputs_for_mult_crew = {"samples": input_records_mult}

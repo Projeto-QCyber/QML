@@ -1,128 +1,165 @@
-analyze_and_vote_mitm:
+analyze_and_vote_backdoor:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to analyze the entire batch for Man-in-the-Middle (MITM) attack patterns.
-    Pass the complete list of samples directly to the 'samples' parameter of the tool.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Backdoor (class index = 0): vote = 1 if predicted_label == 0, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for MITM attack, 0 for other attack), one for each sample.
-    Example: [1, 0, 1, ..., 0, 1]
-  agent: cybersecurity_specialist_mitm
-
-analyze_and_vote_fingerprinting:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to analyze the entire batch for Fingerprinting attack attempts.
-  expected_output: >
-    A list of 20 binary votes (1 for Fingerprinting, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_fingerprinting
-
-analyze_and_vote_ransomware:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect ransomware-related activity across all samples.
-  expected_output: >
-    A list of 20 binary votes (1 for ransomware, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_ransomware
-
-analyze_and_vote_uploading:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect malicious file uploading attempts across all samples.
-  expected_output: >
-    A list of 20 binary votes (1 for uploading attack, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_uploading
-
-analyze_and_vote_sql_injection:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to analyze abnormal query patterns and detect SQL injection attempts.
-  expected_output: >
-    A list of 20 binary votes (1 for SQL injection, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_sql_injection
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_backdoor
 
 analyze_and_vote_ddos_http:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect HTTP flood patterns indicative of DDoS HTTP attacks.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for DDoS_HTTP (class index = 1): vote = 1 if predicted_label == 1, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for DDoS HTTP, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_http
+
+analyze_and_vote_ddos_icmp:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for DDoS_ICMP (class index = 2): vote = 1 if predicted_label == 2, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_ddos_icmp
 
 analyze_and_vote_ddos_tcp:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to analyze TCP traffic anomalies for signs of TCP-based DDoS.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for DDoS_TCP (class index = 3): vote = 1 if predicted_label == 3, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for DDoS TCP, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_tcp
+
+analyze_and_vote_ddos_udp:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for DDoS_UDP (class index = 4): vote = 1 if predicted_label == 4, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_ddos_udp
+
+analyze_and_vote_fingerprinting:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Fingerprinting (class index = 5): vote = 1 if predicted_label == 5, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_fingerprinting
+
+analyze_and_vote_mitm:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for MITM (class index = 6): vote = 1 if predicted_label == 6, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_mitm
 
 analyze_and_vote_password:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect brute force or credential-stuffing attempts.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Password (class index = 7): vote = 1 if predicted_label == 7, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for password attack, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_password
 
 analyze_and_vote_port_scanning:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to identify probing and port scanning attempts.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Port_Scanning (class index = 8): vote = 1 if predicted_label == 8, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for port scanning, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_port_scanning
+
+analyze_and_vote_ransomware:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Ransomware (class index = 9): vote = 1 if predicted_label == 9, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_ransomware
+
+analyze_and_vote_sql_injection:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for SQL_injection (class index = 10): vote = 1 if predicted_label == 10, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_sql_injection
+
+analyze_and_vote_uploading:
+  description: >
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Uploading (class index = 11): vote = 1 if predicted_label == 11, else 0.
+  expected_output: >
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+  agent: cybersecurity_specialist_uploading
 
 analyze_and_vote_vulnerability_scanner:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect automated vulnerability scanning activity.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for Vulnerability_scanner (class index = 12): vote = 1 if predicted_label == 12, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for vulnerability scanning, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_vulnerability_scanner
-
-analyze_and_vote_backdoor:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect backdoor communications or persistence attempts.
-  expected_output: >
-    A list of 20 binary votes (1 for backdoor, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_backdoor
 
 analyze_and_vote_xss:
   description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to identify Cross-Site Scripting (XSS) payload attempts.
+    You have been provided with a list of 5 network data samples: {samples}.
+    Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
+    Cast a binary vote for XSS (class index = 13): vote = 1 if predicted_label == 13, else 0.
   expected_output: >
-    A list of 20 binary votes (1 for XSS, 0 for other attack), one for each sample.
+    JSON with arrays of length 5:
+    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_xss
-
-analyze_and_vote_ddos_udp:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect UDP flood signatures typical of DDoS UDP attacks.
-  expected_output: >
-    A list of 20 binary votes (1 for DDoS UDP, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_ddos_udp
-
-analyze_and_vote_ddos_icmp:
-  description: >
-    You have been provided with a list of 20 network data samples: {samples}.
-    Use the 'Model' tool to detect abother attack ICMP patterns indicative of DDoS ICMP attacks.
-  expected_output: >
-    A list of 20 binary votes (1 for DDoS ICMP, 0 for other attack), one for each sample.
-  agent: cybersecurity_specialist_ddos_icmp
 
 final_evaluation_task:
   description: >
-    You have been provided with the binary votes and justifications from all 14
-    cybersecurity specialists for the same 20 samples. Your job is to evaluate
-    their decisions, compare consistency, and decide the most appropriate final
-    classification for each sample.
+    You have been provided with the outputs of all 14 specialists for the same 5 samples.
+    Each specialist returns a JSON object with:
+    - "votes": binary array (1 if the model's predicted_label equals the specialist's class, else 0)
+    - "predicted_labels": the raw multiclass labels (0–13) for each sample
+    - "notes": short per-sample observations (optional but recommended), grounded in raw fields
+      from the input samples when possible (e.g., TCP flags, port ranges, methods, URIs).
+    For each sample:
+    (1) Inspect which specialists voted 1 and read their notes;
+    (2) If exactly one specialist voted 1, select that class;
+    (3) If multiple voted 1, choose the class whose note best matches the raw sample features
+        (consistency over buzzwords). Prefer explicit feature–label alignment
+        (e.g., high-rate UDP traffic -> DDoS_UDP; repeated port sweeps -> Port_Scanning; SQL patterns -> SQL_injection).
+    (4) If none voted 1, label the sample as "normal".
+    Write a concise rationale explaining any non-trivial tie-breaks.
   expected_output: >
-    JSON with two keys:
-    - "predictions": array of 20 final labels among
-      ["MITM","Fingerprinting","Ransomware","Uploading","SQL_injection",
-       "DDoS_HTTP","DDoS_TCP","Password","Port_Scanning","Vulnerability_scanner",
-       "Backdoor","XSS","DDoS_UDP","DDoS_ICMP"] in the same order as input samples.
-    - "report": short rationale (3-6 sentences) explaining how conflicts were resolved.
+    JSON with:
+    - "predictions": array of 5 final labels (one of:
+      ["Backdoor","DDoS_HTTP","DDoS_ICMP","DDoS_TCP","DDoS_UDP","Fingerprinting",
+       "MITM","Password","Port_Scanning","Ransomware","SQL_injection","Uploading",
+       "Vulnerability_scanner","XSS","normal"])
+    - "report": 3–6 sentences summarizing the audit process and citing 1–2 examples
+      where tie-breaks or overrides happened due to notes aligned with raw features.
   agent: cybersecurity_team_leader

@@ -192,8 +192,8 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_team_leader'],
             llm=_llm_default(),
             verbose=True,
-            allow_delegation=True,   # allow leader to orchestrate the discussion
-            max_iter=3               # avoid unbounded back-and-forth
+            allow_delegation=True,
+            max_iter=1             
         )
 
     # -------------------------------------------------------------------------
