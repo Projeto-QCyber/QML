@@ -11,7 +11,7 @@ def run():
     """
     Executa a crew e avalia seu desempenho.
     """
-    data_path = "data/dados_de_teste.csv"
+    data_path = "D:\\Documentos\\Projetos\\QML\\data\\dados_de_teste.csv"
 
     sampled_data = pd.read_csv(data_path).sample(5, random_state=42)
 
@@ -75,4 +75,18 @@ def run():
         print(f"Erro ao processar o resultado final: {e}")
 
 if __name__ == "__main__":
+    from datetime import datetime
+
+    # Get the current date and time
+    current_datetime_i = datetime.now()
+
+    # Print the result
+    print("*" * 60)
+    print(current_datetime_i)
+
     run()
+
+    current_datetime_f = datetime.now()
+    print("*" * 60)
+    print(current_datetime_f)
+    print(current_datetime_f - current_datetime_i)

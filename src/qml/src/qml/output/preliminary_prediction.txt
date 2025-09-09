@@ -1,0 +1,1 @@
+{"predictions":[1,0,1,0,1],"report":"Analyst 1 and Analyst 2 agreed on samples 1, 3, and 5. Disagreement on samples 2 and 4."}

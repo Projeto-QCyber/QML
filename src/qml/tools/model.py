@@ -19,10 +19,12 @@ class RFModel(BaseTool):
 
     def __init__(self, model_path: str = None, classification: Literal["multiclass", "binary"] = "binary", **kwargs):
         if classification == "multiclass":
-            model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
+            model_path = "D:\\Documentos\\Projetos\\QML\\IA\\weights\\traditional\\random_forest_model_mult.joblib"
+            # model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
         elif classification == "binary" and model_path is None:
-            model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
-        
+            model_path = "D:\\Documentos\\Projetos\\QML\\IA\\weights\\traditional\\random_forest_model_bin.joblib"
+            # model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
+
         if model_path is not None:
             model_path = model_path
 
