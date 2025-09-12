@@ -1,1 +1,1 @@
-{"predictions":[1,0,1,0,1],"report":"Analyst 1 and Analyst 2 agreed on samples 1, 3, and 5. Disagreement on samples 2 and 4."}
+{"predictions":[1],"report":"The sample with all TCP fields set to 0.0 is identified as a potential threat (1). All analysts agreed on the prediction."}

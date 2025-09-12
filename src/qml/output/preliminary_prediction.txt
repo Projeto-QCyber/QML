@@ -1,1 +1,1 @@
-{"predictions":[1,0,1,1,1],"report":"Analyst 1 and Analyst 2 agreed on all samples. There were no disagreements."}
+{"predictions":[1,0,1,0,1],"report":""}

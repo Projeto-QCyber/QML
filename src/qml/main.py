@@ -13,7 +13,7 @@ def run():
     """
     data_path = "D:\\Documentos\\Projetos\\QML\\data\\dados_de_teste.csv"
 
-    sampled_data = pd.read_csv(data_path).sample(5, random_state=42)
+    sampled_data = pd.read_csv(data_path).sample(1, random_state=42)
 
     gt_bin_labels = sampled_data["Attack_label"].tolist()
     gt_mult_labels = sampled_data["Attack_type"].tolist()
@@ -63,6 +63,7 @@ def run():
         result_mult = CyberPredictMult().crew().kickoff(inputs=inputs_for_mult_crew)
         mult_output = result_mult.raw
 
+
         print("-----------------MULTICLASS-----------------")
         print("\n\n--- COMPARAÇÃO (PREDICT vs. GROUND TRUTH) ---")
         print(f"Type of output:     {type(mult_output)}")
@@ -70,6 +71,7 @@ def run():
         print(f"Resultado Bruto da Crew (Predict): {mult_output}")
         decode_type_attack(mult_output["predictions"])
         print("-------------------------------------------------")
+        
 
     except Exception as e:
         print(f"Erro ao processar o resultado final: {e}")
