@@ -3,26 +3,27 @@ name = "qml"
 version = "0.1.0"
 description = "QML - CrewAI"
 authors = [{ name = "Felipe Cordeiro", email = "imfelipe.cordeiro12@gmail.com" }]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11, <=3.13"
 dependencies = [
-    "crewai-tools>=0.59.0",
-    "crewai[tools]>=0.152.0,<1.0.0",
-    "joblib>=1.5.1",
-    "pandas>=2.3.1",
-    "scikit-learn>=1.7.1",
-    "flask-cors==6.0.1",
-    "flask-mysql==1.6.0",
+    "anyio>=4.10.0",
+    "crewai[tools]>=0.186.1",
+    "flask>=3.1.2",
+    "flask-cors>=6.0.1",
+    "flask-mysql>=1.6.0",
     "flask-mysqldb>=2.0.0",
-    "ipykernel>=6.29.5",
-    "langchain-anthropic==0.3.15",
-    "langchain-community==0.3.26",
-    "langchain-ollama==0.3.3",
-    "langgraph==0.4.10",
-    "matplotlib==3.10.3",
-    "mysql==0.0.3",
-    "mysql-connector-python==9.3.0",
-    "pennylane>=0.42.0",
+    "joblib>=1.5.2",
+    "langchain-anthropic>=0.3.20",
+    "langchain-community>=0.3.29",
+    "langchain-ollama>=0.3.8",
+    "langgraph>=0.6.7",
+    "matplotlib>=3.10.6",
+    "mysql>=0.0.3",
+    "mysql-connector-python>=9.4.0",
+    "pandas>=2.3.2",
+    "pennylane>=0.42.3",
+    "pymysql>=1.1.2",
     "python-dotenv>=1.1.1",
+    "scikit-learn==1.6.1",
 ]
 
 [project.scripts]
@@ -34,3 +35,8 @@ build-backend = "hatchling.build"
 
 [tool.crewai]
 type = "crew"
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.4.7",
+]

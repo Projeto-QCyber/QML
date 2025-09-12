@@ -2,15 +2,23 @@ services:
   crewai:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: crewai
+      dockerfile: Dockerfile.crewai
+    container_name: qcyber_crewai
+    restart: always
+    env_file:
+      - .env
+
+  mysql:
+    image: mysql:9.4.0
+    container_name: qcyber_mysql
     restart: always
     env_file:
       - .env
     volumes:
-      - mysql_volume:/var/lib/mysql
+      - ./mysql_volume:/var/lib/mysql
     ports:
       - "${APP_MYSQL_PORT}:3306"
+
 
 volumes:
   mysql_volume:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import List
-from crewai import LLM, Agent, Crew, Task, Process
+from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 
@@ -9,6 +9,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from qml.schemas.agents_roles import Specialist  # keep your Pydantic model
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
 from qml.utils.api_call_models import _llm_default, _llm_leader
+
 
 def _rf_tool_multiclass() -> RFModel:
     """RF model tool configured for multiclass classification."""

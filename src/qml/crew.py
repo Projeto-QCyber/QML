@@ -1,11 +1,11 @@
-from crewai import LLM, Agent, Crew, Task, Process
+from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
-
 from qml.schemas.agents_roles import Specialist
 from qml.tools.model import RFModel
 from qml.utils.api_call_models import _llm_default, _llm_leader
+
 
 @CrewBase
 class CyberPredict:

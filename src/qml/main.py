@@ -1,17 +1,20 @@
 import json
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from collections.abc import Mapping
-
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
 from qml.utils.decode import decode_type_attack
+
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
 
 def run():
     """
     Executa a crew e avalia seu desempenho.
     """
-    data_path = "D:\\Documentos\\Projetos\\QML\\data\\dados_de_teste.csv"
+    data_path = ROOT_DIR / "data/dados_de_teste.csv"
 
     sampled_data = pd.read_csv(data_path).sample(1, random_state=42)
 
@@ -41,7 +44,7 @@ def run():
         # Agora, pegamos a lista de predições de dentro do dicionário
         print("-----------------BINARY-----------------")
         print("\n\n--- COMPARAÇÃO (PREDICT vs. GROUND TRUTH) ---")
-        print(f"Vizualizando predições:     {bin_output["predictions"]}")
+        print(f"Vizualizando predições:     {bin_output['predictions']}")
         print(f"Valores Reais (Ground Truth):     {gt_bin_labels}")
         print(f"Resultado Bruto da Crew (Predict): {bin_output}")
         print("-------------------------------------------------")

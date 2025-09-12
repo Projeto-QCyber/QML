@@ -3,6 +3,7 @@ from crewai import LLM
 # Helper factories to avoid duplication
 # -----------------------------------------------------------------------------
 
+
 def _llm_default() -> LLM:
     return LLM(
         model="ollama/qwen3:4b", 

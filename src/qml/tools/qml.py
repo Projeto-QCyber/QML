@@ -4,12 +4,13 @@ from pennylane import numpy as np
 from typing import List, Dict, Any, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
 from IA.models.vqc import VQC
+
 
 class VQCModelInput(BaseModel):
     """Input schema for VQC model."""
     samples: List[Dict[str, Any]] = Field(..., description="A list of network data samples (as dictionaries) to be used for prediction.")
+
 
 class VQCModel(BaseTool):
     name: str = "Variational Quantum Classifier"

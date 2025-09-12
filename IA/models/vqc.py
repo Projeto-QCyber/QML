@@ -1,5 +1,6 @@
 import pennylane as qml
 
+
 class VQC():
     def __init__(self, n_qubits:int = None, n_layers:int = 3, data_shape:tuple = ()):
         self.n_qubits = n_qubits

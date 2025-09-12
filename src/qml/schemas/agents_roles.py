@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class Analyst(BaseModel):
     title: str
     content: str

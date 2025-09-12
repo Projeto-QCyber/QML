@@ -1,12 +1,17 @@
 import joblib
 import pandas as pd
+from pathlib import Path
 from typing import List, Dict, Any, Literal, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+
 class RFModelInput(BaseModel):
     """Input schema for RFModel for batch predictions."""
     samples: List[Dict[str, Any]] = Field(..., description="A list of network data samples (as dictionaries) to be used for prediction.")
+
 
 class RFModel(BaseTool):
     name: str = "Model"
@@ -19,10 +24,10 @@ class RFModel(BaseTool):
 
     def __init__(self, model_path: str = None, classification: Literal["multiclass", "binary"] = "binary", **kwargs):
         if classification == "multiclass":
-            model_path = "D:\\Documentos\\Projetos\\QML\\IA\\weights\\traditional\\random_forest_model_mult.joblib"
+            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
             # model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
         elif classification == "binary" and model_path is None:
-            model_path = "D:\\Documentos\\Projetos\\QML\\IA\\weights\\traditional\\random_forest_model_bin.joblib"
+            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
             # model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
 
         if model_path is not None:

@@ -1,35 +1,23 @@
 # main.py (agora como uma API Flask)
 import json
 import re
-import os
 import pandas as pd
-import pymysql
+import random
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from datetime import datetime
+from .database import get_db_connection, get_lookup_ids
 
 # Importe suas classes da crewai
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
 
+
+
 # --- CONFIGURAÇÃO DO FLASK E BANCO DE DADOS ---
 app = Flask(__name__)
 load_dotenv()
 
-def get_db_connection():
-    """Cria e retorna uma nova conexão com o banco para cada requisição."""
-    return pymysql.connect(
-        host=os.getenv('MYSQL_HOST', ''),
-        user=os.getenv('MYSQL_USER', 'root'),
-        password=os.getenv('MYSQL_PASSWORD', 'root'),
-        database=os.getenv('MYSQL_DB', 'qcyberDB'),
-        cursorclass=pymysql.cursors.DictCursor
-    )
-
-def get_lookup_ids(cursor, table_name):
-    """Busca IDs de uma tabela de lookup."""
-    cursor.execute(f"SELECT id, nome FROM {table_name}")
-    return {row['nome']: row['id'] for row in cursor.fetchall()}
 
 def extract_json_from_string(text):
     """
@@ -115,11 +103,9 @@ def teste():
     print(f"\n[{datetime.now()}] Requisição de teste recebida em /teste...")
     return jsonify({"status": "API está funcionando!"}), 200
 
+
 # --- INICIA O SERVIDOR FLASK ---
 if __name__ == "__main__":
     # O threaded=True ajuda a lidar com múltiplas conexões de forma mais estável
     # Em produção, você usaria um servidor WSGI como Gunicorn ou Waitress
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
-
-
-
