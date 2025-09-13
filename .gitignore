@@ -21,3 +21,7 @@ wheels/
 
 # Weights model
 IA/weights/traditional/
+
+# Docker volumes
+mysql_volume
+ollama

@@ -1219,9 +1219,9 @@ langchain-experimental==0.3.4 \
     --hash=sha256:2e587306aea36b60fa5e5fc05dc7281bee9f60a806f0bf9d30916e0ee096af80 \
     --hash=sha256:937c4259ee4a639c618d19acf0e2c5c2898ef127050346edc5655259aa281a21
     # via langchain-cohere
-langchain-ollama==0.3.8 \
-    --hash=sha256:79898316d5663c6b08bc758c82b4e136f826cad2be84b4a26be11f1b0ebf686a \
-    --hash=sha256:ba22537bd4dac4424cb8063bb2930fc31c6704db94728b30b75b4db71ccb214e
+langchain-ollama==0.3.3 \
+    --hash=sha256:7d6ed75bfb706751b83173fe886b72ae25bb0b1bd7f3eb2622821c4149f7807b \
+    --hash=sha256:f1c745a4b59d36bb51995c23c6b0fbc20f71956715659425ab88639a14b213cd
     # via qml
 langchain-openai==0.2.14 \
     --hash=sha256:7a514f309e356b182a337c0ed36ab3fbe34d9834a235a3b85cb7f91ae775d978 \

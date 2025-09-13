@@ -50,6 +50,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 # Para o SGBD
 MYSQL_HOST=localhost
+MYSQL_PORT=3306
 MYSQL_ROOT_PASSWORD=
 MYSQL_DATABASE=qcyberDB
 MYSQL_USER=
@@ -60,11 +61,40 @@ APP_SECRET_KEY=
 ```
 <br>
 
-### 4. Inicializar o projeto
+### 4. Configuração do Ollama
+#### 4.1. Sem Docker
 
-Certifique-se de estar exatamente na raiz do projeto. Existem duas opções de você executar o fluxo:
-
+```bash
+# Linux (Debian based)
+curl -fsSL https://ollama.com/install.sh | sh
 ```
+
+```bash
+ollama run qwen3:4b
+```
+
+#### 4.2. Com Docker
+
+##### 4.2.1. Instale o [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html);
+
+##### 4.2.2. Subir container;
+```bash
+docker compose up ollama
+```
+
+##### 4.2.3. Rodar o Modelo;
+```bash
+docker exec -it qcyber_ollama ollama run qwen3:4b
+```
+
+<br>
+
+### 5. Inicializar o projeto
+
+Lembre-se de adicionar os pesos em IA/weights/traditional...
+Além disso, certifique-se de estar exatamente na raiz do projeto. Existem duas opções de você executar o fluxo:
+
+```bash
 # Primeira opção: 
 crewai run
 

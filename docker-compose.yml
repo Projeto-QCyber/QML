@@ -7,6 +7,21 @@ services:
     restart: always
     env_file:
       - .env
+  
+  ollama:
+    image: ollama/ollama:latest
+    container_name: qcyber_ollama
+    volumes:
+      - ./ollama:/root/.ollama
+    ports:
+      - 11434:11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   mysql:
     image: mysql:9.4.0
@@ -17,8 +32,5 @@ services:
     volumes:
       - ./mysql_volume:/var/lib/mysql
     ports:
-      - "${APP_MYSQL_PORT}:3306"
-
-
-volumes:
-  mysql_volume:
+      - "${MYSQL_PORT}:3306"
+    
