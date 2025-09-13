@@ -52,7 +52,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_ROOT_PASSWORD=
-MYSQL_DATABASE=qcyberDB
+MYSQL_DATABASE=qcyber_db
 MYSQL_USER=
 MYSQL_PASSWORD=
 

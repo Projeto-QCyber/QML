@@ -8,7 +8,7 @@ def get_db_connection():
         host=get_env_var('MYSQL_HOST', 'localhost'),
         user=get_env_var('MYSQL_USER', 'root'),
         password=get_env_var('MYSQL_PASSWORD', 'root'),
-        database=get_env_var('MYSQL_DATABASE', 'qcyberDB'),
+        database=get_env_var('MYSQL_DATABASE', 'qcyber_db'),
         cursorclass=pymysql.cursors.DictCursor
     )
 
