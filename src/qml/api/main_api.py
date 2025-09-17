@@ -2,11 +2,13 @@
 import json
 import re
 import pandas as pd
+from pathlib import Path
 import random
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from datetime import datetime
-from .database import get_db_connection, get_lookup_ids
+from qml.api.database_api import get_db_connection, get_lookup_ids
+
 
 # Importe suas classes da crewai
 from qml.crew import CyberPredict
@@ -15,8 +17,9 @@ from qml.crew_multiclass import CyberPredictMult
 
 
 # --- CONFIGURAÇÃO DO FLASK E BANCO DE DADOS ---
+ROOT_DIR = Path(__file__).resolve().parents[3]
 app = Flask(__name__)
-load_dotenv()
+load_dotenv(ROOT_DIR/'.env')
 
 
 def extract_json_from_string(text):

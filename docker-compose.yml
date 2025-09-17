@@ -1,12 +1,20 @@
 services:
-  crewai:
+  flask-api:
+    depends_on: 
+      - mysql
     build:
       context: .
-      dockerfile: Dockerfile.crewai
-    container_name: qcyber_crewai
+      dockerfile: Dockerfile
+    container_name: qcyber_flask_api
     restart: always
     env_file:
       - .env
+    environment:
+       - MYSQL_HOST=mysql  # sobreescrita
+       - MYSQL_PORT=3306  # sobreescrita
+    networks:
+      - qcyber-network
+
   
   ollama:
     image: ollama/ollama:latest
@@ -22,6 +30,9 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - qcyber-network
+
 
   mysql:
     image: mysql:9.4.0
@@ -32,5 +43,12 @@ services:
     volumes:
       - ./mysql_volume:/var/lib/mysql
     ports:
-      - "${MYSQL_PORT}:3306"
-    
+      - ${MYSQL_PORT}:3306
+    networks:
+      - qcyber-network
+
+
+
+networks:
+  qcyber-network:
+    driver: bridge

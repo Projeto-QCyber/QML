@@ -90,7 +90,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-docker/mysql_volume/
+mysql_volume/
+notebooks/
 
 # mkdocs documentation
 /site
