@@ -67,19 +67,11 @@ def run():
             try:
                 bin_output = json.loads(json_str)
             except json.JSONDecodeError:
-                print(f"Aviso: JSON inválido: {json_str}")
+                print(f"Aviso: Falha ao decodificar o JSON extraído da resposta do crew binário. Conteúdo extraído: {json_str}")
         elif hasattr(result_bin, "model_dump"):
             bin_output = result_bin.model_dump()
         else:
-            # NOVO: Fallback para caso seja apenas lista no corpo cru
-            if result_bin.raw.strip().startswith("["):
-                try:
-                    bin_output = {"predictions": json.loads(result_bin.raw)}
-                except Exception as e:
-                    print(f"Aviso: Falha ao converter lista de predições: {e}")
-                    bin_output = {}
-            else:
-                print(f"Aviso: Resposta inesperada: {result_bin.raw}")
+            print(f"Aviso: Resposta inesperada ou sem JSON válido do crew binário. Conteúdo: {result_bin.raw}")
 
 
         print("-----------------BINÁRIO-----------------")

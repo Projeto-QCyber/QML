@@ -1,1 +1,1 @@
-{"predictions":[1,0,1,1,1],"report":"Analyst 1 and Analyst 2 agreed on all samples. There were no disagreements."}
+{"predictions":[0,0,0,0,0],"report":"The final verdict is based on the consensus of both analysts, as they provided identical votes across all five data samples."}

@@ -1,0 +1,43 @@
+from crewai import Agent, Task, Crew, Process
+from crewai.project import CrewBase, agent, task, crew
+
+@CrewBase
+class IncidentResponseCrew:
+    """Crew para gerar planos de resposta a incidentes."""
+
+    agents_config = 'config/agents_response.yaml'
+    tasks_config = 'config/tasks_response.yaml'
+
+    @agent
+    def incident_responder(self) -> Agent:
+        """
+        Define o agente planejador de resposta a incidentes.
+        """
+        return Agent(
+            config=self.agents_config['incident_responder'],
+            llm=_llm_leader(),
+            verbose=True
+        )
+
+    @task
+    def generate_response_plan(self) -> Task:
+        """
+        Define a tarefa para gerar o plano de resposta.
+        """
+        return Task(
+            config=self.tasks_config['generate_response_plan'],
+            agent=self.incident_responder()
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """
+        Monta e retorna o crew com o agente e a tarefa.
+        """
+        return Crew(
+            agents=[self.incident_responder()],
+            tasks=[self.generate_response_plan()],
+            process=Process.sequential,
+            verbose=True
+        )
+
