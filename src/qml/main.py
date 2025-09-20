@@ -5,6 +5,8 @@ from pathlib import Path
 from collections.abc import Mapping
 import re
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+
 # Import Crews
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult

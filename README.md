@@ -51,10 +51,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Para o SGBD
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
-MYSQL_ROOT_PASSWORD=
+MYSQL_ROOT_PASSWORD=root
 MYSQL_DATABASE=qcyber_db
 MYSQL_USER=
 MYSQL_PASSWORD=
+FLASK_API_PORT=5000
 
 # Para as APIs
 APP_SECRET_KEY=
