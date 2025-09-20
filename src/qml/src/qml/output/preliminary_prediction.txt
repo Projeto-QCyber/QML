@@ -1,1 +1,0 @@
-{"predictions":[1],"report":"The sample with all TCP fields set to 0.0 is identified as a potential threat (1). All analysts agreed on the prediction."}

@@ -25,3 +25,7 @@ IA/weights/traditional/
 # Docker volumes
 mysql_volume
 ollama
+
+src/qml/output/*
+
+repomix-output.xml
