@@ -1,7 +1,6 @@
 import json
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from collections.abc import Mapping
 import re
 
@@ -38,7 +37,7 @@ def run():
     """
     Executa os crews para detecção, classificação e resposta a incidentes.
     """
-    data_path = ROOT_DIR / "data/dados_de_teste.csv"
+    data_path = "data/dados_de_teste.csv"
 
     # Para demonstração, vamos amostrar 5 registros dos dados de teste
     sampled_data = pd.read_csv(data_path).sample(5, random_state=42)
@@ -68,19 +67,11 @@ def run():
             try:
                 bin_output = json.loads(json_str)
             except json.JSONDecodeError:
-                print(f"Aviso: JSON inválido: {json_str}")
+                print(f"Aviso: Falha ao decodificar o JSON extraído da resposta do crew binário. Conteúdo extraído: {json_str}")
         elif hasattr(result_bin, "model_dump"):
             bin_output = result_bin.model_dump()
         else:
-            # NOVO: Fallback para caso seja apenas lista no corpo cru
-            if result_bin.raw.strip().startswith("["):
-                try:
-                    bin_output = {"predictions": json.loads(result_bin.raw)}
-                except Exception as e:
-                    print(f"Aviso: Falha ao converter lista de predições: {e}")
-                    bin_output = {}
-            else:
-                print(f"Aviso: Resposta inesperada: {result_bin.raw}")
+            print(f"Aviso: Resposta inesperada ou sem JSON válido do crew binário. Conteúdo: {result_bin.raw}")
 
 
         print("-----------------BINÁRIO-----------------")
@@ -153,13 +144,4 @@ def run():
         print(f"Ocorreu um erro durante a execução: {e}")
 
 if __name__ == "__main__":
-    from datetime import datetime
-
-    # Get the current date and time
-    current_datetime_i = datetime.now()
-
-    # Print the result
-    print("*" * 60)
-    print(current_datetime_i)
-
     run()

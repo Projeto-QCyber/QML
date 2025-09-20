@@ -6,7 +6,7 @@ from crewai import LLM
 
 def _llm_default() -> LLM:
     return LLM(
-        model="ollama/qwen3:4b", 
+        model="ollama/qwen3:8b-q4_K_M", 
         base_url="http://localhost:11434",
         api_key="ollama",
         temperature=0.2,
@@ -16,7 +16,7 @@ def _llm_default() -> LLM:
 
 def _llm_leader() -> LLM:
     return LLM(
-        model="ollama/qwen3:4b",
+        model="ollama/qwen3:8b-q4_K_M",
         base_url="http://localhost:11434",
         api_key="ollama",
         temperature=0.2,

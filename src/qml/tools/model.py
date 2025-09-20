@@ -9,15 +9,13 @@ from pydantic import BaseModel, Field
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
 class RFModelInput(BaseModel):
-    """Input schema for RFModel for batch predictions."""
-    samples: List[Dict[str, Any]] = Field(..., description="A list of network data samples (as dictionaries) to be used for prediction.")
-
+    samples: List[Dict[str, Any]] = Field(..., description="Lista de amostras para predição.")
 
 class RFModel(BaseTool):
     name: str = "Model"
     description: str = """
-        This tool uses a pre-trained Random Forest model for binary classification.
-        It accepts a complete list of data samples (dictionaries) and returns a list of binary predictions (0 or 1).
+        Ferramenta que usa um Random Forest pré-treinado.
+        Recebe uma lista de amostras (dicionários) e retorna lista de predições 0/1.
     """
     args_schema: Type[BaseModel] = RFModelInput
     model: object
@@ -27,29 +25,36 @@ class RFModel(BaseTool):
             model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
             # model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
         elif classification == "binary" and model_path is None:
-            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
-            # model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
-
-        if model_path is not None:
-            model_path = model_path
+            model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
 
         loaded_model = joblib.load(model_path)
-
-        # A ferramenta RFModel herda todos os métodos do modelo carregado usando joblib
         super().__init__(model=loaded_model, **kwargs)
 
-    def _run(self, samples: List[Dict[str, Any]]) -> str:
+    def _run(self, samples: List[Dict[str, Any]]) -> List[int]:
         try:
             df_input = pd.DataFrame(samples)
-            
-            # Linhas de Debug (opcionais, mas úteis)
-            # print(f"DEBUG: Ferramenta recebeu um lote de {len(df_input)} amostras.")
-            # print(f"DEBUG: Colunas para predição: {df_input.columns.tolist()}")
 
-            predictions = self.model.predict(df_input)
-            predictions_list = [int(p) for p in predictions]
+            # Garante que as colunas estão na ordem usada no treino
+            if hasattr(self.model, "feature_names_in_"):
+                missing = set(self.model.feature_names_in_) - set(df_input.columns)
+                if missing:
+                    print(f"[ERRO RFModel] Faltam colunas no input: {missing}")
+                df_input = df_input.reindex(columns=self.model.feature_names_in_)
 
-            return str(predictions_list)
+            # Converte para float (importante se vierem strings)
+            df_input = df_input.astype(float)
+
+            # Debug para verificar se a entrada está correta
+            print(f"[DEBUG RFModel] Shape entrada: {df_input.shape}")
+            print(f"[DEBUG RFModel] Colunas: {list(df_input.columns)}")
+            print(f"[DEBUG RFModel] Primeira linha:\n{df_input.head(1)}")
+
+            preds = self.model.predict(df_input)
+            preds_list = [int(p) for p in preds]
+
+            print(f"[DEBUG RFModel] Predições: {preds_list}")
+            return preds_list
 
         except Exception as e:
-            return f"Error during batch prediction: {str(e)}"
+            print(f"[ERRO RFModel] Falha na predição: {e}")
+            return [0] * len(samples)

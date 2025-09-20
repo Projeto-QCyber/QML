@@ -1,36 +1,71 @@
+# analyze_and_vote_1:
+#   description: >
+#     You have been provided with a list of 5 network data samples: {samples}.
+#     Use the 'Model' tool to get predictions for the entire batch of samples at once.
+#     Pass the complete list of samples directly to the 'samples' parameter of the tool.
+#   expected_output: >
+#     A list of 5 binary votes, one for each sample, as returned from the tool.
+#     Example: [1, 0, 1, 0, 1]
+#   agent: cybersecurity_analyst_1
+
+# analyze_and_vote_2:
+#   description: >
+#     You have been provided with a list of 5 network data samples for independent analysis: {samples}.
+#     Use the 'Model' tool to get predictions for the entire batch of samples at once.
+#     Pass the complete list of samples directly to the 'samples' parameter of the tool.
+#   expected_output: >
+#     A list of 5 binary votes, one for each sample, as returned from the tool.
+#     Example: [1, 0, 0, 1, 1]
+#   agent: cybersecurity_analyst_2
+
+
 analyze_and_vote_1:
   description: >
-    You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to get predictions for the entire batch of samples at once.
-    Pass the complete list of samples directly to the 'samples' parameter of the tool.
+    You are an AI agent analyzing network traffic samples.
+    You are provided with EXACTLY this JSON array of 5 samples:
+    {samples}
+
+    Your job is ONLY to call the tool "Model" with the parameter:
+    {"samples": <the JSON array above>}
+
+    Do NOT change the data, do NOT reformat it, do NOT summarize it.
+    Your output should be EXACTLY what the tool returns.
   expected_output: >
-    A list of 1 binary votes, one for each sample, as returned from the tool.
-    Example: [1, 0, 1, ..., 0, 1]
+    A list of 5 binary votes (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
   description: >
-    You have been provided with a list of 1 network data samples for independent analysis: {samples}.
-    Use the 'Model' tool to get predictions for the entire batch of samples at once.
-    Pass the complete list of samples directly to the 'samples' parameter of the tool.
+    You are an AI agent independently analyzing the SAME 5 samples:
+    {samples}
+
+    Your job is ONLY to call the tool "Model" with the parameter:
+    {"samples": <the JSON array above>}
+
+    Do NOT modify the data in any way.
+    Output EXACTLY the result from the tool.
   expected_output: >
-    A list of 1 binary votes, one for each sample, as returned from the tool.
-    Example: [1, 0, 1, ..., 0, 1]
+    A list of 5 binary votes (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_2
 
+
 validate_results:
- description: >
-    You have received the votes of two analysts on whether 1 samples of
-    network data represent a cyberattack.
-    
-    The first analyst's votes are: {analyst_1_votes}.
-    The second analyst's votes are: {analyst_2_votes}.
-    
-    Analyze the votes and issue a final verdict for each of the 1 samples.
-    If the two votes agree, use the consensus. If there is disagreement, use 
-    your own expert judgment to decide the outcome.
- expected_output: >
-    A list of 1 final binary votes, one for each sample and a report. Example: 
-    predictions: [1, 0, 1, ..., 0, 1]
-    report: "Analyst 1 and Analyst 2 agreed on samples 1, 3, and 5. Disagreement on samples 2 and 4."
- agent: cybersecurity_specialist
+  description: >
+    You are a senior cybersecurity specialist. You have received votes from two junior analysts on 5 data samples.
+    - Analyst 1 votes: {analyze_and_vote_1.output}
+    - Analyst 2 votes: {analyze_and_vote_2.output}
+
+    Your task is to analyze their votes and provide a final verdict.
+    - If both analysts agree, accept their consensus.
+    - If they disagree, use your expert judgment.
+    - Respond STRICTLY in JSON with a key "predictions" containing ONLY the list of final binary votes.
+    - Do not include any extra text outside of the JSON.
+
+  expected_output: >
+    ```json
+    {
+      "predictions": [1, 0, 1, 1, 0]
+    }
+    ```
+  agent: cybersecurity_specialist
+
