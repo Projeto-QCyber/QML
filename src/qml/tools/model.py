@@ -23,9 +23,8 @@ class RFModel(BaseTool):
     def __init__(self, model_path: str = None, classification: Literal["multiclass", "binary"] = "binary", **kwargs):
         if classification == "multiclass":
             model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
-            # model_path = "IA/weights/traditional/random_forest_model_mult.joblib"
         elif classification == "binary" and model_path is None:
-            model_path = "IA/weights/traditional/random_forest_model_bin.joblib"
+            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
 
         loaded_model = joblib.load(model_path)
         super().__init__(model=loaded_model, **kwargs)

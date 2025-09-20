@@ -3,7 +3,10 @@ import json
 import re
 import os
 import random
+import traceback
+from pprint import pformat
 import pandas as pd
+import warnings
 import pymysql
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -13,7 +16,6 @@ from datetime import datetime
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
 from qml.response import IncidentResponseCrew
-from qml.tools.shap_explain import ExplainTop2SHAP
 
 # --- CONFIGURAÇÃO DO FLASK E BANCO DE DADOS ---
 app = Flask(__name__)
@@ -127,16 +129,30 @@ def analisar_pacote():
     """
     Recebe dados de um "pacote", executa a análise com a crew e salva o resultado no banco.
     """
-    print(f"\n[{datetime.now()}] Nova requisição recebida em /analisar...")
+    req_id = f"REQ-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{random.randint(1000,9999)}"
+    start_ts = datetime.now()
+    print(f"\n[{start_ts}] [{req_id}] Nova requisição recebida em /analisar de {request.remote_addr}", flush=True)
     
     # 1. Valida os dados de entrada
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    try:
+        keys_info = list(data.keys()) if isinstance(data, dict) else str(type(data))
+        print(f"[{req_id}] Payload bruto recebido (chaves ou tipo): {keys_info}", flush=True)
+        if isinstance(data, dict):
+            # Evita logar dados muito grandes: mostra no máx 5 campos e 200 chars por valor
+            preview = {k: (str(v)[:200] + ('…' if len(str(v)) > 200 else '')) for i, (k, v) in enumerate(data.items()) if i < 5}
+            print(f"[{req_id}] Payload preview: {pformat(preview)}", flush=True)
+    except Exception as e:
+        print(f"[{req_id}] Falha ao inspecionar payload: {e}", flush=True)
+    
     if not data or 'device_id' not in data:
+        print(f"[{req_id}] Payload inválido: ausente ou sem 'device_id'", flush=True)
         return jsonify({"error": "Payload inválido. 'device_id' é obrigatório."}), 400
 
     device_id = data['device_id']
     features = data.get('features')
     samples_payload = data.get('samples')  # lista de dicionários opcional
+    print(f"[{req_id}] device_id={device_id} | features_tipo={type(features)} | samples_tipo={type(samples_payload)}", flush=True)
     
     try:
         # 2. Prepara os dados para a crewai
@@ -145,6 +161,11 @@ def analisar_pacote():
             x_test = pd.DataFrame(samples_payload)
             inputs_for_bin_crew = {"samples": samples_payload}
             inputs_for_mult_crew = {"samples": samples_payload}
+            try:
+                first_keys = list(samples_payload[0].keys()) if samples_payload else []
+                print(f"[{req_id}] Modo multi-amostras: {len(samples_payload)} amostras | primeiras chaves: {first_keys[:10]}", flush=True)
+            except Exception as e:
+                print(f"[{req_id}] Falha ao inspecionar amostras: {e}", flush=True)
         else:
             if not isinstance(features, dict):
                 return jsonify({"error": "Payload inválido. Envie 'samples' (lista) ou 'features' (objeto)."}), 400
@@ -154,12 +175,29 @@ def analisar_pacote():
             inputs_for_bin_crew = {'samples': input_records_single * 5}
             # A crew multiclasse usa 1 amostra.
             inputs_for_mult_crew = {'samples': input_records_single}
+            try:
+                print(f"[{req_id}] Modo single-feature: {len(features.keys())} chaves | duplicando para 5 amostras para binário", flush=True)
+            except Exception:
+                print(f"[{req_id}] Modo single-feature: não foi possível contar chaves de 'features'", flush=True)
+
+        try:
+            print(f"[{req_id}] x_test shape={x_test.shape} | bin_samples={len(inputs_for_bin_crew.get('samples', []))} | mult_samples={len(inputs_for_mult_crew.get('samples', []))}", flush=True)
+        except Exception as e:
+            print(f"[{req_id}] Falha ao inspecionar x_test ou inputs: {e}", flush=True)
 
         # 3. Executa a análise da crew (binária e multiclasse)
         # NOTA: A sua crew binária parece não ser mais necessária se o CSV só tem ataques,
         # mas mantive a lógica caso você use outros dados no futuro.
+        print(f"[{req_id}] [BIN] Iniciando crew binária com {len(inputs_for_bin_crew.get('samples', []))} amostras...", flush=True)
         result_bin = CyberPredict().crew().kickoff(inputs=inputs_for_bin_crew)
-        bin_output = extract_json_from_string(result_bin.raw)
+        print(f"[{req_id}] [BIN] Crew binária finalizada. Tipo de retorno: {type(result_bin)}", flush=True)
+        try:
+            raw_text_bin = getattr(result_bin, "raw", str(result_bin))
+            print(f"[{req_id}] [BIN] Saída bruta (até 1000 chars): {raw_text_bin[:1000]}", flush=True)
+        except Exception as e:
+            print(f"[{req_id}] [BIN] Falha ao obter saída bruta: {e}", flush=True)
+        bin_output = extract_json_from_string(getattr(result_bin, "raw", str(result_bin)))
+        print(f"[{req_id}] [BIN] JSON extraído: {list(bin_output.keys()) if isinstance(bin_output, dict) else type(bin_output)}", flush=True)
         
         preds = []
         if isinstance(bin_output, dict):
@@ -167,33 +205,37 @@ def analisar_pacote():
         if not preds:
             # Fallback: tenta extrair a primeira lista de inteiros do texto bruto
             preds = extract_first_int_list_from_text(getattr(result_bin, "raw", str(result_bin)))
-        print(f"[BINÁRIO] Predições extraídas: {preds}")
+        print(f"[{req_id}] [BIN] Predições extraídas: {preds}", flush=True)
         # Se múltiplas amostras foram enviadas, considere ataque se qualquer for 1
         is_attack = any(int(p) == 1 for p in preds) if preds else False
         if not is_attack:
-            print("➡️ Evento não classificado como ataque. Nenhuma ação tomada.")
+            print(f"[{req_id}] ➡️ Evento não classificado como ataque. Nenhuma ação tomada.", flush=True)
             return jsonify({"status": "ignorado", "reason": "Não é um ataque"}), 200
 
-        # 3.1. Compute SHAP Top-2 lines for the samples to guide the leader's report
-        shap_lines = ""
-        try:
-            explainer = ExplainTop2SHAP(classification="multiclass")
-            shap_lines = explainer._run(inputs_for_mult_crew['samples'])
-            print("[SHAP] Top-2 lines computed for leader context.")
-        except Exception as e:
-            print(f"⚠️ Falha ao computar SHAP Top-2: {e}")
-
-        # 3.2. Executa a crew multiclasse com SHAP como contexto adicional para o líder
-        mult_inputs = {**inputs_for_mult_crew, "shap_explain": shap_lines}
+        # 3.1. Executa a crew multiclasse sem SHAP (colocado de lado por ora)
+        mult_inputs = inputs_for_mult_crew
+        print(f"[{req_id}] [MULT] Iniciando crew multiclasse; campos no input: {list(mult_inputs.keys())}", flush=True)
         result_mult = CyberPredictMult().crew().kickoff(inputs=mult_inputs)
-        mult_output = extract_json_from_string(result_mult.raw)
+        print(f"[{req_id}] [MULT] Crew multiclasse finalizada. Tipo de retorno: {type(result_mult)}", flush=True)
+        try:
+            raw_text_mult = getattr(result_mult, "raw", str(result_mult))
+            print(f"[{req_id}] [MULT] Saída bruta (até 1000 chars): {raw_text_mult[:1000]}", flush=True)
+        except Exception as e:
+            print(f"[{req_id}] [MULT] Falha ao obter saída bruta: {e}", flush=True)
+        mult_output = extract_json_from_string(getattr(result_mult, "raw", str(result_mult)))
+        print(f"[{req_id}] [MULT] JSON extraído: {list(mult_output.keys()) if isinstance(mult_output, dict) else type(mult_output)}", flush=True)
 
         if not mult_output or "predictions" not in mult_output:
-            print("⚠️ A análise multiclasse falhou ou não retornou predições.")
+            try:
+                keys = list(mult_output.keys()) if isinstance(mult_output, dict) else str(type(mult_output))
+            except Exception:
+                keys = 'desconhecido'
+            print(f"[{req_id}] ⚠️ A análise multiclasse falhou ou não retornou predições. keys/tipo={keys}", flush=True)
             return jsonify({"status": "falha", "reason": "Análise multiclasse não retornou predições"}), 500
         
         # Pode haver múltiplas predições; selecionamos a primeira para persistência
         tipo_ataque_label = mult_output["predictions"][0]
+        print(f"[{req_id}] [MULT] Label de ataque selecionado: {tipo_ataque_label}", flush=True)
         # Explicação do líder (multiclasse) com fallback para binário
         explanation_text = None
         if isinstance(mult_output, dict):
@@ -202,20 +244,28 @@ def analisar_pacote():
             explanation_text = bin_output.get("report")
         if not explanation_text:
             explanation_text = "Sem explicação fornecida pelo líder."
-        # Anexa um apêndice com as linhas SHAP (resumo técnico) para auditoria
-        if shap_lines:
-            explanation_text = (explanation_text or "") + "\n\nSHAP Top-2 (por amostra):\n" + shap_lines
+        print(f"[{req_id}] [MULT] Tamanho do relatório do líder: {len(explanation_text or '')}", flush=True)
 
         # Plano de resposta ao incidente (markdown)
         try:
+            print(f"[{req_id}] [IR] Iniciando geração do plano de resposta para '{tipo_ataque_label}'", flush=True)
             ir_result = IncidentResponseCrew().crew().kickoff(inputs={"attack_type": tipo_ataque_label})
             incident_plan = getattr(ir_result, "raw", str(ir_result))
+            print(f"[{req_id}] [IR] Plano de resposta gerado (até 800 chars):\n{incident_plan[:800]}", flush=True)
         except Exception:
+            print(f"[{req_id}] ⚠️ Falha ao gerar plano de resposta. Prosseguindo sem ações.\n{traceback.format_exc()}", flush=True)
             incident_plan = ""
 
-        print(f"✅ Análise concluída. Ataque tipo: {tipo_ataque_label} para o dispositivo: {device_id}")
+        print(f"[{req_id}] ✅ Análise concluída. Ataque tipo: {tipo_ataque_label} para o dispositivo: {device_id}", flush=True)
 
         # 4. Salva a detecção no banco de dados
+        try:
+            db_host = os.getenv('MYSQL_HOST', '192.168.1.87')
+            db_user = os.getenv('MYSQL_USER', 'root')
+            db_name = os.getenv('MYSQL_DB', 'qcyberDB')
+            print(f"[{req_id}] [DB] Conectando ao MySQL host={db_host} user={db_user} db={db_name}", flush=True)
+        except Exception:
+            pass
         conn = get_db_connection()
         with conn.cursor() as cursor:
             status_resp_ids = get_lookup_ids(cursor, "enum_status_resposta")
@@ -227,6 +277,11 @@ def analisar_pacote():
 
             # Resolve FK do tipo de ataque, se existir mapeamento no banco.
             tipo_ataque_fk = resolve_tipo_ataque_id(cursor, tipo_ataque_label)
+            try:
+                print(f"[{req_id}] [DB] Status resposta mapeados: {len(status_resp_ids)} | escolhido_id={status_resposta_id}", flush=True)
+                print(f"[{req_id}] [DB] tipo_ataque_label='{tipo_ataque_label}' -> fk_id={tipo_ataque_fk}", flush=True)
+            except Exception:
+                pass
 
             sql = """
             INSERT INTO deteccoes (data_deteccao, dispositivo_id, tipo_ataque_id, status_resposta_id, incidente_id)
@@ -238,7 +293,12 @@ def analisar_pacote():
         
         conn.close()
         
-        print(f"💾 Detecção #{new_detection_id} salva no banco de dados.")
+        print(f"[{req_id}] 💾 Detecção #{new_detection_id} salva no banco de dados.", flush=True)
+        try:
+            duration = (datetime.now() - start_ts).total_seconds()
+            print(f"[{req_id}] ⏱️ Duração total da requisição: {duration:.2f}s", flush=True)
+        except Exception:
+            pass
         return jsonify({
             "status": "sucesso",
             "detection_id": new_detection_id,
@@ -246,12 +306,11 @@ def analisar_pacote():
             "tipo_ataque": tipo_ataque_label,
             "tipo_ataque_id": tipo_ataque_fk,
             "explanation": explanation_text,
-            "actions": incident_plan,
-            "shap_top2": shap_lines
+            "actions": incident_plan
         }), 201
 
     except Exception as e:
-        print(f"❌ ERRO GERAL DURANTE A ANÁLISE: {e}")
+        print(f"[{req_id}] ❌ ERRO GERAL DURANTE A ANÁLISE: {e}\n{traceback.format_exc()}", flush=True)
         return jsonify({"error": "Ocorreu um erro interno no servidor de análise."}), 500
 
 

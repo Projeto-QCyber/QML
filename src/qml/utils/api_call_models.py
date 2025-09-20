@@ -9,7 +9,6 @@ _OPENAI_API_KEY: str = "sk-proj-L4u1a7WoZ7hDFQqpbkP_XWPGsmd-21G0QRCqwRdFmjl8rYqK
 _OPENAI_BASE_URL: str = "https://api.openai.com/v1"
 
 
-
 def _get_ollama_base_url() -> str:
     """
     Returns the appropriate Ollama base URL depending on the environment.
@@ -64,4 +63,5 @@ def _llm_leader() -> LLM:
         base_url="https://api.openai.com/v1",
         api_key=_OPENAI_API_KEY,
     )
+
 '''

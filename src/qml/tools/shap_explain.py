@@ -7,9 +7,14 @@ from typing import List, Dict, Any, Literal, Type, Tuple
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import shap
+import os
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+
+# Simple in-process caches to avoid reloading model and rebuilding the SHAP explainer
+_MODEL_CACHE: dict[str, object] = {}
+_EXPLAINER_CACHE: dict[str, shap.TreeExplainer] = {}
 
 
 class ExplainInput(BaseModel):
@@ -33,28 +38,44 @@ class ExplainTop2SHAP(BaseTool):
         self,
         model_path: str | None = None,
         classification: Literal["multiclass", "binary"] = "binary",
+        mode: Literal["on", "off", "fast"] | None = None,
         **kwargs,
     ) -> None:
+        # Resolve mode from env if not provided
+        env_mode = os.getenv("QCYBER_SHAP_MODE", "on").strip().lower()
+        self._mode: str = (mode or env_mode)
+        if self._mode not in ("on", "off", "fast"):
+            self._mode = "on"
+
         if classification == "multiclass":
             model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
         elif classification == "binary" and model_path is None:
             model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
 
-        print(f"[ExplainTop2] Loading model from {model_path}")
-        t_load = time.time()
-        loaded_model = joblib.load(model_path)
-        print(f"[ExplainTop2] Model loaded in {time.time() - t_load:.2f}s")
+        key = f"{classification}:{Path(model_path).resolve()}"
+
+        # Load model once
+        if key not in _MODEL_CACHE:
+            print(f"[ExplainTop2] Loading model from {model_path}")
+            t_load = time.time()
+            _MODEL_CACHE[key] = joblib.load(model_path)
+            print(f"[ExplainTop2] Model loaded in {time.time() - t_load:.2f}s")
+        loaded_model = _MODEL_CACHE[key]
         super().__init__(model=loaded_model, **kwargs)
 
-        # Prepare explainer (required)
+        # Build explainer once (only in ON mode)
         self._is_multiclass = classification == "multiclass"
-        print("[ExplainTop2] Building TreeExplainer ...")
-        t_exp = time.time()
-        self._explainer = shap.TreeExplainer(
-            self.model,
-            feature_perturbation="tree_path_dependent"
-        )
-        print(f"[ExplainTop2] TreeExplainer ready in {time.time() - t_exp:.2f}s")
+        self._explainer = None
+        if self._mode == "on":
+            if key not in _EXPLAINER_CACHE:
+                print("[ExplainTop2] Building TreeExplainer ...")
+                t_exp = time.time()
+                _EXPLAINER_CACHE[key] = shap.TreeExplainer(
+                    self.model,
+                    feature_perturbation="tree_path_dependent"
+                )
+                print(f"[ExplainTop2] TreeExplainer ready in {time.time() - t_exp:.2f}s")
+            self._explainer = _EXPLAINER_CACHE[key]
 
     def _format_line(self, idx: int, feat_info: List[Tuple[str, str]]) -> str:
         # One-liner tailored for the leader's quick read with directions
@@ -190,9 +211,48 @@ class ExplainTop2SHAP(BaseTool):
         if df_input.empty:
             return "[]"
 
-        print(f"[ExplainTop2] _run: samples={len(samples)}, features={df_input.shape[1]}")
+        print(f"[ExplainTop2] _run: mode={self._mode} samples={len(samples)}, features={df_input.shape[1]}")
+
+        # OFF mode: skip entirely
+        if self._mode == "off":
+            return ""
+
+        # FAST mode: lightweight heuristic using feature importances and batch medians
+        if self._mode == "fast":
+            if not hasattr(self.model, "feature_importances_"):
+                return "\n".join(self._format_line(i + 1, []) for i in range(len(samples)))
+            importances = np.asarray(getattr(self.model, "feature_importances_"))
+            # Guard if feature counts mismatch
+            if importances.shape[0] != df_input.shape[1]:
+                return "\n".join(self._format_line(i + 1, []) for i in range(len(samples)))
+            order = np.argsort(importances)[-2:][::-1]
+            top_idx = [int(x) for x in order]
+            top_feats = [df_input.columns[j] for j in top_idx]
+            medians = {f: float(df_input[f].median()) for f in top_feats}
+            lines = []
+            for i in range(len(df_input)):
+                info: List[Tuple[str, str]] = []
+                for f in top_feats:
+                    val = float(df_input.iloc[i][f])
+                    direction = "higher than normal" if val >= medians[f] else "lower than normal"
+                    info.append((f, direction))
+                lines.append(self._format_line(i + 1, info))
+            return "\n".join(lines)
+
+        # ON mode: compute SHAP with chunking to reduce peak memory
         t0 = time.time()
-        top2_per_sample = self._topk_from_shap(df_input)
-        print(f"[ExplainTop2] Top-2 selection done in {time.time() - t0:.2f}s")
-        lines = [self._format_line(i + 1, feats) for i, feats in enumerate(top2_per_sample)]
-        return "\n".join(lines)
+        chunk_env = os.getenv("QCYBER_SHAP_CHUNK", "64")
+        try:
+            chunk_size = max(1, int(chunk_env))
+        except Exception:
+            chunk_size = 64
+        n = len(df_input)
+        all_lines: List[str] = []
+        for start in range(0, n, chunk_size):
+            end = min(start + chunk_size, n)
+            sub_df = df_input.iloc[start:end]
+            top2_per_sample = self._topk_from_shap(sub_df)
+            lines = [self._format_line(start + i + 1, feats) for i, feats in enumerate(top2_per_sample)]
+            all_lines.extend(lines)
+        print(f"[ExplainTop2] Top-2 selection done in {time.time() - t0:.2f}s (chunk_size={chunk_size})")
+        return "\n".join(all_lines)
