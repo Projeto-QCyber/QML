@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List, Optional
 
 
 class Analyst(BaseModel):
@@ -6,5 +7,5 @@ class Analyst(BaseModel):
     content: str
 
 class Specialist(BaseModel):
-    predictions: list
-    report: str
+    predictions: List[int]
+    report: Optional[str] = None

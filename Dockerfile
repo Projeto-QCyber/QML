@@ -18,7 +18,14 @@ RUN useradd -m -r appuser && \
 ENV PYTHONPATH=/app/src
 
 # Copy the application code
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser ./IA ./IA
+COPY --chown=appuser:appuser ./src ./src
+COPY --chown=appuser:appuser ./test_api.py .
+COPY --chown=appuser:appuser ./data .
+COPY --chown=appuser:appuser ./meta-learning .
+COPY --chown=appuser:appuser pyproject.toml .
+COPY --chown=appuser:appuser uv.lock .
+
 COPY --chown=appuser:appuser entrypoint.prod.sh .
 COPY --chown=appuser:appuser wait-for-it.sh /wait-for-it.sh
 

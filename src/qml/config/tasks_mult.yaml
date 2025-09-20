@@ -146,6 +146,11 @@ final_evaluation_task:
     - "predicted_labels": the raw multiclass labels (0–13) for each sample
     - "notes": short per-sample observations (optional but recommended), grounded in raw fields
       from the input samples when possible (e.g., TCP flags, port ranges, methods, URIs).
+    Additionally, you are provided with SHAP Top-2 directional lines per sample computed once by
+    the system for the same input batch:
+    {shap_explain}
+    Treat these SHAP lines as authoritative cues for which raw features most strongly influenced the
+    RF model around its decision boundary. Prefer explanations that align with these features.
     For each sample:
     (1) Inspect which specialists voted 1 and read their notes;
     (2) If exactly one specialist voted 1, select that class;
@@ -161,5 +166,6 @@ final_evaluation_task:
        "MITM","Password","Port_Scanning","Ransomware","SQL_injection","Uploading",
        "Vulnerability_scanner","XSS","normal"])
     - "report": 3–6 sentences summarizing the audit process and citing 1–2 examples
-      where tie-breaks or overrides happened due to notes aligned with raw features.
+      where tie-breaks or overrides happened due to notes aligned with raw features and referencing
+      the SHAP Top-2 lines when relevant (e.g., "[1], tcp.flags higher than normal, dst_port lower than normal").
   agent: cybersecurity_team_leader

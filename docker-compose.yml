@@ -2,6 +2,7 @@ services:
   flask-api:
     depends_on: 
       - mysql
+      - ollama
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,6 +10,8 @@ services:
     restart: always
     env_file:
       - .env
+    ports: # <-- ADD THIS SECTION
+      - "${FLASK_API_PORT:-5000}:5000"
     environment:
        - MYSQL_HOST=mysql  # sobreescrita
        - MYSQL_PORT=3306  # sobreescrita
@@ -21,8 +24,10 @@ services:
     container_name: qcyber_ollama
     volumes:
       - ./ollama:/root/.ollama
+      - ./entrypoint.ollama.sh:/entrypoint.ollama.sh
     ports:
       - 11434:11434
+    entrypoint: ["/bin/bash", "/entrypoint.ollama.sh"]
     deploy:
       resources:
         reservations:
@@ -32,7 +37,6 @@ services:
               capabilities: [gpu]
     networks:
       - qcyber-network
-
 
   mysql:
     image: mysql:9.4.0

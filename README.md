@@ -85,7 +85,7 @@ docker compose up ollama
 
 ##### 4.2.3. Rodar o Modelo;
 ```bash
-docker exec -it qcyber_ollama ollama run qwen3:4b
+docker exec -it qcyber_ollama ollama run qwen3:8b-q4_K_M
 ```
 
 <br>
