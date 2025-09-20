@@ -8,6 +8,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 # Your custom schema for the leader's final structured output
 from qml.schemas.agents_roles import Specialist  # keep your Pydantic model
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
+from qml.tools.shap_explain import ExplainTop2SHAP
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
 
@@ -15,6 +16,9 @@ def _rf_tool_multiclass() -> RFModel:
     """RF model tool configured for multiclass classification."""
     return RFModel(classification="multiclass")
 
+def _explain_tool_multiclass() -> ExplainTop2SHAP:
+    """Directional SHAP explainer for multiclass RF model."""
+    return ExplainTop2SHAP(classification="multiclass")
 
 @CrewBase
 class CyberPredictMult:
@@ -37,7 +41,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_mitm(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_mitm'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -47,7 +51,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_fingerprinting(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_fingerprinting'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -57,7 +61,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ransomware(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ransomware'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -67,7 +71,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_uploading(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_uploading'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -77,7 +81,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_sql_injection(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_sql_injection'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -87,7 +91,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_http(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_http'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -97,7 +101,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_tcp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_tcp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -107,7 +111,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_password(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_password'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -117,7 +121,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_port_scanning(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_port_scanning'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -127,7 +131,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_vulnerability_scanner(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_vulnerability_scanner'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -137,7 +141,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_backdoor(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_backdoor'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -147,7 +151,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_xss(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_xss'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -157,7 +161,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_udp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_udp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -167,7 +171,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_icmp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_icmp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[_rf_tool_multiclass(), _explain_tool_multiclass()],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False

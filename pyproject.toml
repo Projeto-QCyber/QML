@@ -25,6 +25,7 @@ dependencies = [
     "pymysql>=1.1.2",
     "python-dotenv>=1.1.1",
     "scikit-learn==1.6.1",
+    "shap>=0.48.0",
 ]
 
 [project.scripts]
