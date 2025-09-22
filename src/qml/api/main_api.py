@@ -201,14 +201,6 @@ def analisar_pacote():
     features = data.get('features')
     samples_payload = data.get('samples')  # lista de dicionários opcional
     print(f"[{req_id}] device_id={device_id} | features_tipo={type(features)} | samples_tipo={type(samples_payload)}", flush=True)
-    
-    # Garante estrutura mínima do banco de dados
-    try:
-        if not ensure_bootstrap():
-            print(f"[{req_id}] ❌ Falha ao garantir estrutura do banco.", flush=True)
-            return jsonify({"error": "Falha ao preparar banco de dados."}), 500
-    except Exception as e:
-        print(f"[{req_id}] ⚠️ Erro ao tentar bootstrap do banco: {e}", flush=True)
 
     try:
         # 2. Prepara os dados para a crewai
