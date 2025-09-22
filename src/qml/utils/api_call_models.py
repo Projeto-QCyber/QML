@@ -28,7 +28,7 @@ def _llm_default() -> LLM:
         base_url=_get_ollama_base_url(),
         api_key="ollama",
         temperature=0.7,
-        max_tokens=400,
+        max_tokens=1024,
         extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 

@@ -41,16 +41,16 @@ def run_test():
             attack_df = df[mask_attack]
         elif 'Attack_type' in df.columns:
             series_type = df['Attack_type'].astype(str).str.lower().str.strip()
-            # Treat non-benign/normal as attack
+            # Treat non-benign/normal as non attack!
             mask_attack = ~series_type.isin(['benign', 'normal', 'none', ''])
             attack_df = df[mask_attack]
 
         if not attack_df.empty and n_total > 0:
             # Pick one attack sample to be FIRST
-            first_attack_row = attack_df.sample(1, random_state=None)
+            first_attack_row = attack_df.sample(3, random_state=None)
             # Sample the remaining rows from the rest of the dataset (avoid duplicate index)
             remaining_pool = df.drop(first_attack_row.index, errors='ignore')
-            remaining_n = max(0, n_total - 1)
+            remaining_n = max(0, n_total - 3)
             if len(remaining_pool) >= remaining_n:
                 remaining_rows = remaining_pool.sample(remaining_n, random_state=None) if remaining_n > 0 else remaining_pool.iloc[0:0]
             else:
@@ -59,9 +59,7 @@ def run_test():
             samples_df = pd.concat([first_attack_row, remaining_rows], ignore_index=True)
             print("\n1. Selected samples ensuring the FIRST is an ATTACK.")
         else:
-            # Fallback: random selection (cannot determine attacks)
-            samples_df = df.sample(n_total, random_state=None)
-            print("\n1. Selected random samples (could not ensure first is attack).")
+            raise Exception("\n(ERROR) 1. Selected random samples (could not ensure first is attack).")
 
         # Drop labels and convert to list[dict]
         features_df = samples_df.drop(columns=['Attack_label', 'Attack_type'], errors='ignore')
