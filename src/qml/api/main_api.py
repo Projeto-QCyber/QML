@@ -16,10 +16,13 @@ from datetime import datetime
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
 from qml.response import IncidentResponseCrew
+os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
+os.environ['OTEL_SDK_DISABLED'] = 'true'
 
 # --- CONFIGURAÇÃO DO FLASK E BANCO DE DADOS ---
 app = Flask(__name__)
 load_dotenv()
+
 
 def resolve_tipo_ataque_id(cursor, tipo_ataque_label):
     """
@@ -65,12 +68,20 @@ def extract_first_int_list_from_text(text):
 
 
 def get_db_connection():
-    """Cria e retorna uma nova conexão com o banco para cada requisição."""
+    """Cria e retorna uma nova conexão com o banco para cada requisição.
+    Usa variáveis de ambiente com fallbacks robustos e ignora valores vazios.
+    """
+    # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
+    db_host = os.getenv('MYSQL_HOST') or 'mysql'
+    db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
+    db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
+    db_name = os.getenv('MYSQL_DB') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
+
     return pymysql.connect(
-        host=os.getenv('MYSQL_HOST', '192.168.1.87'),
-        user=os.getenv('MYSQL_USER', 'root'),
-        password=os.getenv('MYSQL_PASSWORD', 'root'),
-        database=os.getenv('MYSQL_DB', 'qcyberDB'),
+        host=db_host,
+        user=db_user,
+        password=db_pass,
+        database=db_name,
         cursorclass=pymysql.cursors.DictCursor
     )
 
@@ -212,9 +223,35 @@ def analisar_pacote():
             print(f"[{req_id}] ➡️ Evento não classificado como ataque. Nenhuma ação tomada.", flush=True)
             return jsonify({"status": "ignorado", "reason": "Não é um ataque"}), 200
 
-        # 3.1. Executa a crew multiclasse sem SHAP (colocado de lado por ora)
-        mult_inputs = inputs_for_mult_crew
-        print(f"[{req_id}] [MULT] Iniciando crew multiclasse; campos no input: {list(mult_inputs.keys())}", flush=True)
+        # 3.1. Seleciona a PRIMEIRA amostra classificada como ATAQUE para a multiclasse
+        attack_index = None
+        try:
+            for i, p in enumerate(preds):
+                if int(p) == 1:
+                    attack_index = i
+                    break
+        except Exception as e:
+            print(f"[{req_id}] [MULT] Falha ao determinar índice do ataque a partir de preds={preds}: {e}", flush=True)
+
+        if samples_payload and isinstance(samples_payload, list) and attack_index is not None and 0 <= attack_index < len(samples_payload):
+            chosen_sample = samples_payload[attack_index]
+            mult_inputs = {"samples": [chosen_sample]}
+            try:
+                preview_keys = list(chosen_sample.keys())[:10]
+                print(f"[{req_id}] [MULT] Usando amostra de índice {attack_index} (primeira com voto=1) | primeiras chaves: {preview_keys}", flush=True)
+            except Exception:
+                print(f"[{req_id}] [MULT] Usando amostra de índice {attack_index} (primeira com voto=1)", flush=True)
+        elif isinstance(features, dict):
+            # Caso single-feature, já temos 1 amostra
+            mult_inputs = {'samples': [features]}
+            print(f"[{req_id}] [MULT] Modo single-feature -> enviando a única amostra para multiclasse", flush=True)
+        else:
+            # Fallback: não foi possível mapear índice -> envia a primeira amostra disponível
+            fallback_sample = samples_payload[0] if isinstance(samples_payload, list) and samples_payload else None
+            mult_inputs = {'samples': [fallback_sample]} if fallback_sample else inputs_for_mult_crew
+            print(f"[{req_id}] [MULT] Fallback -> enviando a primeira amostra para multiclasse", flush=True)
+
+        print(f"[{req_id}] [MULT] Iniciando crew multiclasse; qtd_amostras={len(mult_inputs.get('samples', []))}", flush=True)
         result_mult = CyberPredictMult().crew().kickoff(inputs=mult_inputs)
         print(f"[{req_id}] [MULT] Crew multiclasse finalizada. Tipo de retorno: {type(result_mult)}", flush=True)
         try:
@@ -260,10 +297,11 @@ def analisar_pacote():
 
         # 4. Salva a detecção no banco de dados
         try:
-            db_host = os.getenv('MYSQL_HOST', '192.168.1.87')
-            db_user = os.getenv('MYSQL_USER', 'root')
-            db_name = os.getenv('MYSQL_DB', 'qcyberDB')
-            print(f"[{req_id}] [DB] Conectando ao MySQL host={db_host} user={db_user} db={db_name}", flush=True)
+            # Mostra os valores efetivos (com fallbacks) sem expor senha
+            _db_host = os.getenv('MYSQL_HOST') or 'mysql'
+            _db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
+            _db_name = os.getenv('MYSQL_DB') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
+            print(f"[{req_id}] [DB] Conectando ao MySQL host={_db_host} user={_db_user} db={_db_name}", flush=True)
         except Exception:
             pass
         conn = get_db_connection()

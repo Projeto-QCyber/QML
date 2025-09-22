@@ -71,7 +71,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 ```bash
-ollama run qwen3:4b
+ollama run qwen3:8b-q4_K_M
 ```
 
 #### 4.2. Com Docker

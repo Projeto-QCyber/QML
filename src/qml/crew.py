@@ -63,7 +63,6 @@ class CyberPredict:
             config=self.tasks_config['validate_results'],
             agent=self.cybersecurity_specialist(),
             output_file='src/qml/output/preliminary_prediction.txt',
-            output_pydantic=Specialist
         )
 
     @crew

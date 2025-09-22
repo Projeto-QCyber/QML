@@ -32,7 +32,7 @@ analyze_and_vote_1:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
     - Do NOT reformat or alter the samples in any way.
-    - Output EXACTLY and ONLY what the tool returns (e.g., [0,1,0,0,0]).
+    - Output EXACTLY and ONLY what the tool returns (e.g., [0/1,...]).
   expected_output: >
     A list of 5 binary votes (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_1
@@ -69,7 +69,7 @@ validate_results:
   expected_output: >
     ```json
     {
-      "predictions": [1, 0, 1, 1, 0]
+      "predictions": [0/1,...]
     }
     ```
   agent: cybersecurity_specialist

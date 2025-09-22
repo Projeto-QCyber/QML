@@ -11,9 +11,6 @@ from qml.tools.model import RFModel              # your tool (RandomForest model
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
 
-def _rf_tool_multiclass() -> RFModel:
-    """RF model tool configured for multiclass classification."""
-    return RFModel(classification="multiclass")
 
 
 @CrewBase
@@ -29,6 +26,10 @@ class CyberPredictMult:
     agents_config = 'config/agents_mult.yaml'
     tasks_config = 'config/tasks_mult.yaml'
 
+    def __init__(self):
+        """Initializes a single, shared RFModel tool instance for all agents."""
+        self.rf_tool = RFModel(classification="multiclass")
+
     # -------------------------------------------------------------------------
     # 14 Specialist Agents (one per attack family)
     # The keys below must match your YAML in agents_mult.yaml
@@ -37,7 +38,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_mitm(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_mitm'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -47,7 +48,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_fingerprinting(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_fingerprinting'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -57,7 +58,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ransomware(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ransomware'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -67,7 +68,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_uploading(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_uploading'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -77,7 +78,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_sql_injection(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_sql_injection'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -87,7 +88,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_http(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_http'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -97,7 +98,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_tcp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_tcp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -107,7 +108,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_password(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_password'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -117,7 +118,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_port_scanning(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_port_scanning'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -127,7 +128,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_vulnerability_scanner(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_vulnerability_scanner'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -137,7 +138,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_backdoor(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_backdoor'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -147,7 +148,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_xss(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_xss'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -157,7 +158,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_udp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_udp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -167,7 +168,7 @@ class CyberPredictMult:
     def cybersecurity_specialist_ddos_icmp(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_specialist_ddos_icmp'],
-            tools=[_rf_tool_multiclass()],
+            tools=[self.rf_tool],
             llm=_llm_default(),
             verbose=True,
             allow_delegation=False
@@ -192,59 +193,101 @@ class CyberPredictMult:
     # -------------------------------------------------------------------------
     @task
     def analyze_and_vote_mitm(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_mitm'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_mitm'],
+            agent=self.cybersecurity_specialist_mitm()
+        )
 
     @task
     def analyze_and_vote_fingerprinting(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_fingerprinting'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_fingerprinting'],
+            agent=self.cybersecurity_specialist_fingerprinting()
+        )
 
     @task
     def analyze_and_vote_ransomware(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_ransomware'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_ransomware'],
+            agent=self.cybersecurity_specialist_ransomware()
+        )
 
     @task
     def analyze_and_vote_uploading(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_uploading'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_uploading'],
+            agent=self.cybersecurity_specialist_uploading()
+        )
 
     @task
     def analyze_and_vote_sql_injection(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_sql_injection'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_sql_injection'],
+            agent=self.cybersecurity_specialist_sql_injection()
+        )
 
     @task
     def analyze_and_vote_ddos_http(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_ddos_http'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_ddos_http'],
+            agent=self.cybersecurity_specialist_ddos_http()
+        )
 
     @task
     def analyze_and_vote_ddos_tcp(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_ddos_tcp'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_ddos_tcp'],
+            agent=self.cybersecurity_specialist_ddos_tcp()
+        )
 
     @task
     def analyze_and_vote_password(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_password'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_password'],
+            agent=self.cybersecurity_specialist_password()
+        )
 
     @task
     def analyze_and_vote_port_scanning(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_port_scanning'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_port_scanning'],
+            agent=self.cybersecurity_specialist_port_scanning()
+        )
 
     @task
     def analyze_and_vote_vulnerability_scanner(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_vulnerability_scanner'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_vulnerability_scanner'],
+            agent=self.cybersecurity_specialist_vulnerability_scanner()
+        )
 
     @task
     def analyze_and_vote_backdoor(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_backdoor'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_backdoor'],
+            agent=self.cybersecurity_specialist_backdoor()
+        )
 
     @task
     def analyze_and_vote_xss(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_xss'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_xss'],
+            agent=self.cybersecurity_specialist_xss()
+        )
 
     @task
     def analyze_and_vote_ddos_udp(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_ddos_udp'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_ddos_udp'],
+            agent=self.cybersecurity_specialist_ddos_udp()
+        )
 
     @task
     def analyze_and_vote_ddos_icmp(self) -> Task:
-        return Task(config=self.tasks_config['analyze_and_vote_ddos_icmp'])
+        return Task(
+            config=self.tasks_config['analyze_and_vote_ddos_icmp'],
+            agent=self.cybersecurity_specialist_ddos_icmp()
+        )
 
     # -------------------------------------------------------------------------
     # Final evaluation task (leader consolidates and explains rationale)

@@ -5,7 +5,7 @@ analyze_and_vote_backdoor:
     Cast a binary vote for Backdoor (class index = 0): vote = 1 if predicted_label == 0, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_backdoor
 
 analyze_and_vote_ddos_http:
@@ -15,7 +15,7 @@ analyze_and_vote_ddos_http:
     Cast a binary vote for DDoS_HTTP (class index = 1): vote = 1 if predicted_label == 1, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_http
 
 analyze_and_vote_ddos_icmp:
@@ -25,7 +25,7 @@ analyze_and_vote_ddos_icmp:
     Cast a binary vote for DDoS_ICMP (class index = 2): vote = 1 if predicted_label == 2, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_icmp
 
 analyze_and_vote_ddos_tcp:
@@ -35,7 +35,7 @@ analyze_and_vote_ddos_tcp:
     Cast a binary vote for DDoS_TCP (class index = 3): vote = 1 if predicted_label == 3, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_tcp
 
 analyze_and_vote_ddos_udp:
@@ -45,17 +45,17 @@ analyze_and_vote_ddos_udp:
     Cast a binary vote for DDoS_UDP (class index = 4): vote = 1 if predicted_label == 4, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_udp
 
 analyze_and_vote_fingerprinting:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
     Use the 'Model' tool to obtain the multiclass prediction (0–13) for each sample.
-    Cast a binary vote for Fingerprinting (class index = 1): vote = 1 if predicted_label == 1, else 0.
+    Cast a binary vote for Fingerprinting (class index = 5): vote = 1 if predicted_label == 5, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_fingerprinting
 
 analyze_and_vote_mitm:
@@ -65,7 +65,7 @@ analyze_and_vote_mitm:
     Cast a binary vote for MITM (class index = 6): vote = 1 if predicted_label == 6, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_mitm
 
 analyze_and_vote_password:
@@ -75,7 +75,7 @@ analyze_and_vote_password:
     Cast a binary vote for Password (class index = 7): vote = 1 if predicted_label == 7, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_password
 
 analyze_and_vote_port_scanning:
@@ -85,7 +85,7 @@ analyze_and_vote_port_scanning:
     Cast a binary vote for Port_Scanning (class index = 8): vote = 1 if predicted_label == 8, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_port_scanning
 
 analyze_and_vote_ransomware:
@@ -95,7 +95,7 @@ analyze_and_vote_ransomware:
     Cast a binary vote for Ransomware (class index = 9): vote = 1 if predicted_label == 9, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ransomware
 
 analyze_and_vote_sql_injection:
@@ -105,7 +105,7 @@ analyze_and_vote_sql_injection:
     Cast a binary vote for SQL_injection (class index = 10): vote = 1 if predicted_label == 10, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_sql_injection
 
 analyze_and_vote_uploading:
@@ -115,7 +115,7 @@ analyze_and_vote_uploading:
     Cast a binary vote for Uploading (class index = 11): vote = 1 if predicted_label == 11, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_uploading
 
 analyze_and_vote_vulnerability_scanner:
@@ -125,7 +125,7 @@ analyze_and_vote_vulnerability_scanner:
     Cast a binary vote for Vulnerability_scanner (class index = 12): vote = 1 if predicted_label == 12, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_vulnerability_scanner
 
 analyze_and_vote_xss:
@@ -135,7 +135,7 @@ analyze_and_vote_xss:
     Cast a binary vote for XSS (class index = 13): vote = 1 if predicted_label == 13, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1,...], "predicted_labels":[0..13,...], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..13], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_xss
 
 final_evaluation_task:
@@ -146,26 +146,14 @@ final_evaluation_task:
     - "predicted_labels": the raw multiclass labels (0–13) for each sample
     - "notes": short per-sample observations (optional but recommended), grounded in raw fields
       from the input samples when possible (e.g., TCP flags, port ranges, methods, URIs).
-    Additionally, you are provided with SHAP Top-2 directional lines per sample computed once by
-    the system for the same input batch:
-    {shap_explain}
-    Treat these SHAP lines as authoritative cues for which raw features most strongly influenced the
-    RF model around its decision boundary. Prefer explanations that align with these features.
     For each sample:
     (1) Inspect which specialists voted 1 and read their notes;
     (2) If exactly one specialist voted 1, select that class;
-    (3) If multiple voted 1, choose the class whose note best matches the raw sample features
-        (consistency over buzzwords). Prefer explicit feature–label alignment
-        (e.g., high-rate UDP traffic -> DDoS_UDP; repeated port sweeps -> Port_Scanning; SQL patterns -> SQL_injection).
-    (4) If none voted 1, label the sample as "normal".
+    (3) If none voted 1, label the sample as "normal".
     Write a concise rationale explaining any non-trivial tie-breaks.
   expected_output: >
     JSON with:
-    - "predictions": array of 1 final labels (one of:
-      ["Backdoor","DDoS_HTTP","DDoS_ICMP","DDoS_TCP","DDoS_UDP","Fingerprinting",
-       "MITM","Password","Port_Scanning","Ransomware","SQL_injection","Uploading",
-       "Vulnerability_scanner","XSS","normal"])
+    - "predictions": array of 1 final labels (one of: [Backdoor, DDoS_HTTP, DDoS_ICMP, DDoS_TCP, DDoS_UDP, Fingerprinting, MITM, Password, Port_Scanning, Ransomware, SQL_injection, Uploading, Vulnerability_scanner, XSS])
     - "report": 3–6 sentences summarizing the audit process and citing 1–2 examples
-      where tie-breaks or overrides happened due to notes aligned with raw features and referencing
-      the SHAP Top-2 lines when relevant (e.g., "[1], tcp.flags higher than normal, dst_port lower than normal").
+      where tie-breaks or overrides happened due to notes aligned with raw features.
   agent: cybersecurity_team_leader

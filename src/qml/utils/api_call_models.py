@@ -28,8 +28,8 @@ def _llm_default() -> LLM:
         base_url=_get_ollama_base_url(),
         api_key="ollama",
         temperature=0.7,
-        max_tokens=1024,
-        extra_body={"keep_alive": -1, "stop": ["\n\n", "\n###", "```"]},
+        max_tokens=400,
+        extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 
 def _llm_leader() -> LLM:
@@ -39,7 +39,7 @@ def _llm_leader() -> LLM:
         api_key="ollama",
         temperature=0.7,
         max_tokens=2048,
-        extra_body={"keep_alive": -1, "stop": ["\n\n", "\n###", "```"]},
+        extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 '''
 
