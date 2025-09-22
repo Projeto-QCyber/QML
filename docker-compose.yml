@@ -10,8 +10,8 @@ services:
     restart: always
     env_file:
       - .env
-    ports: # <-- ADD THIS SECTION
-      - "${FLASK_API_PORT:-5000}:5000"
+    ports:
+      - "${FLASK_API_PORT:?error}:${FLASK_API_PORT}"
     environment:
        - MYSQL_HOST=mysql  # sobreescrita
        - MYSQL_PORT=3306  # sobreescrita
