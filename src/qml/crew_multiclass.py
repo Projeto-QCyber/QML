@@ -318,7 +318,6 @@ class CyberPredictMult:
                 self.analyze_and_vote_ddos_icmp(),
             ],
             output_file='src/qml/output/final_prediction.txt',
-            output_pydantic=Specialist
         )
 
     # -------------------------------------------------------------------------
