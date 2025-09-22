@@ -42,7 +42,7 @@ def run_test():
         elif 'Attack_type' in df.columns:
             series_type = df['Attack_type'].astype(str).str.lower().str.strip()
             # Treat non-benign/normal as non attack!
-            mask_attack = ~series_type.isin(['benign', 'normal', 'none', ''])
+            mask_attack = ~series_type.isin(['benign', 'normal', 'none', '0'])
             attack_df = df[mask_attack]
 
         if not attack_df.empty and n_total > 0:
