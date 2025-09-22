@@ -1,4 +1,3 @@
-# main.py (agora como uma API Flask)
 import json
 import re
 import os
@@ -12,6 +11,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from datetime import datetime
 from qml.api.create_qcyber_db import ensure_bootstrap
+from qml.utils.generic import get_env_var
 
 # Importe suas classes da crewai
 from qml.crew import CyberPredict
@@ -20,7 +20,7 @@ from qml.response import IncidentResponseCrew
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 
-# --- CONFIGURAÇÃO DO FLASK E BANCO DE DADOS ---
+
 app = Flask(__name__)
 load_dotenv()
 
@@ -74,10 +74,10 @@ def get_db_connection():
     Usa variáveis de ambiente com fallbacks robustos e ignora valores vazios.
     """
     # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
-    db_host = os.getenv('MYSQL_HOST') or 'mysql'
-    db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
-    db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
-    db_name = os.getenv('MYSQL_DB') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
+    db_host = get_env_var('MYSQL_HOST', 'mysql')
+    db_user = get_env_var('MYSQL_USER') or get_env_var('MYSQL_USERNAME') or 'root'
+    db_pass = get_env_var('MYSQL_PASSWORD') or get_env_var('MYSQL_ROOT_PASSWORD') or ''
+    db_name = get_env_var('MYSQL_DATABASE') or get_env_var('MYSQL_DATABASE') or 'qcyber_db'
 
     return pymysql.connect(
         host=db_host,
@@ -441,7 +441,4 @@ def analisar_pacote():
 if __name__ == "__main__":
     # O threaded=True ajuda a lidar com múltiplas conexões de forma mais estável
     # Em produção, você usaria um servidor WSGI como Gunicorn ou Waitress
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
-
-
-
+    app.run(host='0.0.0.0', port=int(get_env_var('FLASK_API_PORT', 5000)), debug=True, threaded=True)

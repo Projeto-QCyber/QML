@@ -2,7 +2,7 @@
 
 
 # Espera o MySQL ficar pronto
-/wait-for-it.sh $MYSQL_HOST:3306 --timeout=35 --strict -- echo "MySQL está pronto! Ouvindo na porta interna 3306"
+/wait-for-it.sh mysql:3306 --timeout=35 --strict -- echo "MySQL está pronto! Ouvindo na porta interna 3306"
 
 # Executa bootstrap do banco antes de iniciar a API (única vez no boot)
 python - <<'PY'
