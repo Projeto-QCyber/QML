@@ -74,9 +74,9 @@ def get_db_connection():
     """
     # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
     db_host = get_env_var('MYSQL_HOST', 'mysql')
-    db_user = get_env_var('MYSQL_USER') or get_env_var('MYSQL_USERNAME') or 'root'
-    db_pass = get_env_var('MYSQL_PASSWORD') or get_env_var('MYSQL_ROOT_PASSWORD') or ''
-    db_name = get_env_var('MYSQL_DATABASE') or get_env_var('MYSQL_DATABASE') or 'qcyber_db'
+    db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
+    db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
+    db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
 
     return pymysql.connect(
         host=db_host,
