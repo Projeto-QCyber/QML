@@ -21,6 +21,7 @@ def recreate_database():
     try:
         conn = pymysql.connect(
             host=os.getenv('MYSQL_HOST') or 'mysql',
+            port=int(os.getenv('MYSQL_PORT') or 50000),
             user=os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root',
             password=os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or 'root',
             charset='utf8mb4'
@@ -385,6 +386,7 @@ def verify_database():
     try:
         conn = pymysql.connect(
             host=os.getenv('MYSQL_HOST') or 'mysql',
+            port=int(os.getenv('MYSQL_PORT') or 50000),
             user=os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root',
             password=os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or 'root',
             database=db_name,

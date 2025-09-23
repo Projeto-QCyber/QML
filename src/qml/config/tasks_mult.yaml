@@ -146,6 +146,16 @@ final_evaluation_task:
     - "predicted_labels": the raw multiclass labels (0–13) for each sample
     - "notes": short per-sample observations (optional but recommended), grounded in raw fields
       from the input samples when possible (e.g., TCP flags, port ranges, methods, URIs).
+
+    ADDITIONAL CONTEXT: A SHAP (SHapley Additive exPlanations) analysis was run on the sample,
+    providing the feature importance for the model's prediction. You MUST use this information 
+    to enrich your final report, explaining WHY the model made its decision.
+    
+    SHAP EXPLANATION:
+    ---
+    {shap_explanation}
+    ---
+
     For each sample:
     (1) Inspect which specialists voted 1 and read their notes;
     (2) If exactly one specialist voted 1, select that class;

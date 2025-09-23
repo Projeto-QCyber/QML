@@ -10,6 +10,52 @@ from qml.schemas.agents_roles import Specialist  # keep your Pydantic model
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
+import shap
+import time
+import pandas as pd
+import numpy as np
+
+def run_shap_explanation(model, sample_df: pd.DataFrame):
+    start_time = time.time()
+    print("\n[SHAP] Starting SHAP analysis for the sample...")
+
+    try:
+        if hasattr(model, "feature_names_in_"):
+            sample_df = sample_df.reindex(columns=model.feature_names_in_, fill_value=0)
+
+        print("\n[SHAP] Starting SHAP analysis for the sample...")
+
+        explainer = shap.TreeExplainer(model)
+
+        print("\n[SHAP] Explainer created.")
+
+        shap_values = explainer.shap_values(sample_df.values)
+
+        print("\n[SHAP] SHAP values computed.")
+        
+        feature_names = sample_df.columns
+        feature_shap_values = dict(zip(feature_names, shap_values))
+        sorted_features = sorted(feature_shap_values.items(), key=lambda item: abs(item[1]), reverse=True)
+
+        print(f"\n[SHAP] Features sorted. feature_names: {feature_names}, feature_shap_values: {feature_shap_values}, sorted_features: {sorted_features}")
+
+        explanation = "The top 2 features influencing this prediction were:\n"
+
+        print(f"\n[SHAP] Explanation: {explanation}")
+
+        for feature, shap_value in sorted_features[:2]:
+            effect = "positively" if shap_value > 0 else "negatively"
+            explanation += f"- The feature '{feature}' had a strong {effect} impact on the decision.\n"
+        
+        elapsed_time = time.time() - start_time
+        print(f"[SHAP] ✅ Analysis finished in {elapsed_time:.2f} seconds.")
+        return explanation
+
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        error_message = f"[SHAP] ❌ ERROR: Failed to generate SHAP explanation in {elapsed_time:.2f}s. Reason: {e}"
+        print(error_message)
+        return "SHAP analysis could not be performed due to an internal error."
 
 
 

@@ -16,6 +16,7 @@ from qml.utils.generic import get_env_var
 from qml.crew import CyberPredict
 from qml.crew_multiclass import CyberPredictMult
 from qml.response import IncidentResponseCrew
+from qml.tools.shap_explain import ExplainTop2SHAP
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 
@@ -25,21 +26,45 @@ load_dotenv()
 
 def resolve_tipo_ataque_id(cursor, tipo_ataque_label):
     """
-    Resolve o ID do tipo de ataque no banco de dados baseado no label.
-    Normaliza (case/espacos/underscore) e faz fallback para 99 ('Normal') se não encontrar.
+    Resolve o tipo de ataque no banco com base no label informado e retorna:
+    (id_inteiro, nome_canonico_do_enum)
+
+    - Normaliza (case/espaços/underscore) o label recebido.
+    - Se não encontrar, faz fallback para (99, 'Normal').
     """
     try:
         cursor.execute("SELECT id, nome FROM enum_tipo_ataque")
         rows = cursor.fetchall()
+
         def _norm(s):
             s = re.sub(r'[^A-Za-z0-9]+', '_', str(s)).strip('_').lower()
             return re.sub(r'_+', '_', s)
-        norm_map = {_norm(r['nome']): r['id'] for r in rows}
+
+        # Mapas de apoio
+        id_map = {int(r['id']): (int(r['id']), r['nome']) for r in rows}
+        norm_map = {_norm(r['nome']): (int(r['id']), r['nome']) for r in rows}
+
+        # 1) Se veio número (ou string numérica), tenta por ID
+        if isinstance(tipo_ataque_label, (int, float)) or (isinstance(tipo_ataque_label, str) and tipo_ataque_label.isdigit()):
+            try:
+                val = int(tipo_ataque_label)
+                if val in id_map:
+                    return id_map[val]
+            except Exception:
+                pass
+
+        # 2) Caso contrário, tenta por nome normalizado
         key = _norm(tipo_ataque_label) if tipo_ataque_label else 'normal'
-        return norm_map.get(key, 99)
+        if key in norm_map:
+            return norm_map[key]
+
+        # 3) Fallback seguro
+        if 'normal' in norm_map:
+            return norm_map['normal']
+        return (99, 'Normal')
     except Exception as e:
-        print(f"❌ Erro ao resolver ID do tipo de ataque '{tipo_ataque_label}': {e}")
-        return 99
+        print(f"❌ Erro ao resolver tipo_ataque '{tipo_ataque_label}': {e}")
+        return (99, 'Normal')
 
 
 def extract_first_int_list_from_text(text):
@@ -199,6 +224,12 @@ def analisar_pacote():
     device_id = data['device_id']
     features = data.get('features')
     samples_payload = data.get('samples')  # lista de dicionários opcional
+    # Inicializações defensivas para evitar variáveis não definidas em fluxos excepcionais
+    tipo_ataque_label = None
+    tipo_ataque_fk = None
+    tipo_ataque_nome = None
+    explanation_text = None
+    incident_plan = ""
     print(f"[{req_id}] device_id={device_id} | features_tipo={type(features)} | samples_tipo={type(samples_payload)}", flush=True)
     
     # Garante estrutura mínima do banco de dados
@@ -261,8 +292,12 @@ def analisar_pacote():
             # Fallback: tenta extrair a primeira lista de inteiros do texto bruto
             preds = extract_first_int_list_from_text(getattr(result_bin, "raw", str(result_bin)))
         print(f"[{req_id}] [BIN] Predições extraídas: {preds}", flush=True)
+        # Falha explícita se não houve predições do binário (evita mascarar como 'Normal')
+        if preds is None or len(preds) == 0:
+            print(f"[{req_id}] [BIN] ❌ Nenhuma predição retornada pela crew binária.", flush=True)
+            return jsonify({"error": "Nenhuma predição retornada pela crew binária"}), 502
         # Se múltiplas amostras foram enviadas, considere ataque se qualquer for 1
-        is_attack = any(int(p) == 1 for p in preds) if preds else False
+        is_attack = any(int(p) == 1 for p in preds)
         skip_mult = not is_attack
         if skip_mult:
             print(f"[{req_id}] ➡️ Evento não classificado como ataque pela crew binária. Prosseguindo com fallback para 'Normal'.", flush=True)
@@ -302,6 +337,28 @@ def analisar_pacote():
             incident_plan = ""
         else:
             print(f"[{req_id}] [MULT] Iniciando crew multiclasse; qtd_amostras={len(mult_inputs.get('samples', []))}", flush=True)
+
+            shap_explanation = ""
+            try:
+                # Use the centralized SHAP tool (handles model loading/caching and SHAP shapes)
+                sample_for_shap = mult_inputs['samples'][0]
+                print(f"[{req_id}] [SHAP] Preparing ExplainTop2SHAP for multiclass...", flush=True)
+                explainer_tool = ExplainTop2SHAP(classification="multiclass")
+
+                # Ensure feature ordering matches the model training schema
+                if hasattr(explainer_tool.model, "feature_names_in_"):
+                    ordered_sample = {k: float(sample_for_shap.get(k, 0.0)) for k in explainer_tool.model.feature_names_in_}
+                else:
+                    ordered_sample = sample_for_shap
+
+                shap_explanation = explainer_tool._run([ordered_sample])
+                print(f"[{req_id}] [SHAP] Explanation generated: {shap_explanation}", flush=True)
+                mult_inputs['shap_explanation'] = shap_explanation
+                print(f"[{req_id}] [SHAP] Explanation added to crew context.", flush=True)
+            except Exception as e:
+                mult_inputs['shap_explanation'] = ""
+                print(f"[{req_id}] ⚠️ [SHAP] Failed to generate explanation: {e}", flush=True)
+
             result_mult = CyberPredictMult().crew().kickoff(inputs=mult_inputs)
             print(f"[{req_id}] [MULT] Crew multiclasse finalizada. Tipo de retorno: {type(result_mult)}", flush=True)
             try:
@@ -316,12 +373,19 @@ def analisar_pacote():
             except Exception:
                 print(f"[{req_id}] [MULT] JSON extraído: tipo desconhecido", flush=True)
 
-            if isinstance(mult_output, dict) and "predictions" in mult_output and mult_output["predictions"]:
-                tipo_ataque_label = mult_output["predictions"][0]
+            if isinstance(mult_output, dict) and mult_output.get("predictions"):
+                tipo_ataque_id = mult_output["predictions"][0]
             else:
-                print(f"[{req_id}] ⚠️ A análise multiclasse falhou ou não retornou predições -> assumindo 'Normal'", flush=True)
-                tipo_ataque_label = "Normal"
-            print(f"[{req_id}] [MULT] Label de ataque selecionado: {tipo_ataque_label}", flush=True)
+                print(f"[{req_id}] ❌ A análise multiclasse falhou ou não retornou predições.", flush=True)
+                return jsonify({"error": "Multiclass crew failed to return predictions"}), 502
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                tipo_ataque_fk, tipo_ataque_nome = resolve_tipo_ataque_id(cursor, tipo_ataque_id)
+                # Mantenha 'tipo_ataque_label' sempre como string legível
+                tipo_ataque_label = tipo_ataque_nome
+                print(f"[{req_id}] [MULT] Label de ataque selecionado: ({tipo_ataque_fk}, '{tipo_ataque_nome}')", flush=True)
+            conn.close()
+            
 
             # Explicação do líder (multiclasse) com fallback para binário
             explanation_text = None
@@ -338,7 +402,8 @@ def analisar_pacote():
             if str(tipo_ataque_label).lower() != "normal":
                 try:
                     print(f"[{req_id}] [IR] Iniciando geração do plano de resposta para '{tipo_ataque_label}'", flush=True)
-                    ir_result = IncidentResponseCrew().crew().kickoff(inputs={"attack_type": tipo_ataque_label})
+                    # tasks_response.yaml espera a chave 'attack_label' e valor string
+                    ir_result = IncidentResponseCrew().crew().kickoff(inputs={"attack_label": tipo_ataque_label})
                     incident_plan = getattr(ir_result, "raw", str(ir_result))
                     print(f"[{req_id}] [IR] Plano de resposta gerado (até 800 chars):\n{incident_plan[:800]}", flush=True)
                 except Exception:
@@ -367,8 +432,10 @@ def analisar_pacote():
             status_pendente_id = status_resp_ids.get('Pendente', status_resposta_id)
             status_manual_id = status_resp_ids.get('Análise Manual Necessária', status_resposta_id)
 
-            # Resolve FK do tipo de ataque normalizado (fallback=99)
-            tipo_ataque_fk = resolve_tipo_ataque_id(cursor, tipo_ataque_label)
+            # Resolve FK do tipo de ataque normalizado (fallback=(99,'Normal'))
+            # Se já conhecido (via multiclasse), reutiliza; caso contrário, resolve agora (ex.: 'Normal')
+            if tipo_ataque_fk is None or tipo_ataque_nome is None:
+                tipo_ataque_fk, tipo_ataque_nome = resolve_tipo_ataque_id(cursor, tipo_ataque_label)
 
             # Resolve/garante dispositivo
             dispositivo_id = ensure_dispositivo(cursor, device_id)
@@ -380,11 +447,24 @@ def analisar_pacote():
             except Exception:
                 pass
 
-            # Nome canônico do tipo de ataque
-            cursor.execute("SELECT nome FROM enum_tipo_ataque WHERE id=%s", (tipo_ataque_fk,))
-            row_nome = cursor.fetchone()
-            tipo_ataque_nome = (row_nome['nome'] if row_nome and 'nome' in row_nome else str(tipo_ataque_label))
-            relatorio_api_text = f"Simulação: Detectado '{tipo_ataque_nome}'"
+            # Nome canônico do tipo de ataque já resolvido
+            if not tipo_ataque_nome:
+                tipo_ataque_nome = str(tipo_ataque_label) if tipo_ataque_label else 'Normal'
+            # Torna o relatório útil: combine relatório do líder e plano (quando houver)
+            resumo_detect = f"Detecção: '{tipo_ataque_nome}'"
+            partes_relatorio = []
+            if explanation_text and explanation_text.strip() and explanation_text.strip().lower() != 'sem explicação fornecida pelo líder.':
+                partes_relatorio.append(f"Relatório de Classificação (Crew):\n{explanation_text.strip()}")
+            if incident_plan and str(incident_plan).strip():
+                partes_relatorio.append(f"Plano de Resposta ao Incidente (Crew):\n{str(incident_plan).strip()}")
+
+            # Constrói texto do relatório para persistência
+            try:
+                relatorio_api_text = resumo_detect
+                if partes_relatorio:
+                    relatorio_api_text = resumo_detect + "\n\n" + "\n\n".join(partes_relatorio)
+            except Exception:
+                relatorio_api_text = resumo_detect
 
             # Insere detecção com predicao=enum_id (não 0/1)
             sql_det = """
@@ -404,7 +484,7 @@ def analisar_pacote():
                 titulo = f"Detecção de {tipo_ataque_nome}"
                 resumo_tecnico = f"Detecção do tipo '{tipo_ataque_nome}' registrada pelo analisador."
                 try:
-                    acoes_json = json.dumps({"plano": incident_plan or ""})
+                    acoes_json = json.dumps([incident_plan or ""])
                 except Exception:
                     acoes_json = json.dumps({"plano": ""})
 
@@ -430,7 +510,7 @@ def analisar_pacote():
 
         # Resposta mínima conforme contrato
         response_payload = {
-            "mensagem": relatorio_api_text,
+            "mensagem": "Detecção analisada e registrada com sucesso!",
             "deteccao_id": new_detection_id,
             "incidente_id": new_incidente_id,
             "tipo_ataque_detectado": tipo_ataque_nome,

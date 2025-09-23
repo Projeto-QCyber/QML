@@ -55,5 +55,5 @@ class RFModel(BaseTool):
             return preds_list
 
         except Exception as e:
-            print(f"[ERRO RFModel] Falha na predição: {e}")
-            return [0] * len(samples)
+            # Surface upstream; caller must decide fallback (not silently 'normal')
+            raise RuntimeError(f"RFModel prediction failed: {e}") from e

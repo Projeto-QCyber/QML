@@ -1,6 +1,6 @@
 generate_response_plan:
   description: >
-    An attack of type '{attack_type}' has been detected.
+    An attack of type '{attack_label}' has been detected.
     Provide a concise, step-by-step incident response plan.
     Structure the plan with the sections: "Immediate Actions," "Analysis and Containment," and "Eradication and Recovery."
     For each attack type, provide the most relevant and effective actions.
