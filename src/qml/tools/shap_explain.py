@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any, Literal, Type, Tuple
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 import shap
 import os
 
@@ -33,6 +33,10 @@ class ExplainTop2SHAP(BaseTool):
     )
     args_schema: Type[BaseModel] = ExplainInput
     model: object
+    # Pydantic private attrs (won't be stripped/reset by BaseModel)
+    _mode: str = PrivateAttr(default="on")
+    _is_multiclass: bool = PrivateAttr(default=False)
+    _explainer: shap.TreeExplainer | None = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -41,11 +45,8 @@ class ExplainTop2SHAP(BaseTool):
         mode: Literal["on", "off", "fast"] | None = None,
         **kwargs,
     ) -> None:
-        # Resolve mode from env if not provided
+        # Resolve mode from env if not provided (assign to attr after BaseModel init)
         env_mode = os.getenv("QCYBER_SHAP_MODE", "on").strip().lower()
-        self._mode: str = (mode or env_mode)
-        if self._mode not in ("on", "off", "fast"):
-            self._mode = "on"
 
         if classification == "multiclass":
             model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
@@ -63,7 +64,10 @@ class ExplainTop2SHAP(BaseTool):
         loaded_model = _MODEL_CACHE[key]
         super().__init__(model=loaded_model, **kwargs)
 
-        # Build explainer once (only in ON mode)
+        # Set private attrs after BaseModel init
+        self._mode = (mode or env_mode)
+        if self._mode not in ("on", "off", "fast"):
+            self._mode = "on"
         self._is_multiclass = classification == "multiclass"
         self._explainer = None
         if self._mode == "on":

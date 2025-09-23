@@ -28,4 +28,4 @@ except Exception as e:
     print(f'[ENTRYPOINT] Falha no bootstrap: {e}')
 PY
 
-python -m gunicorn --timeout 900 --bind 0.0.0.0:$FLASK_API_PORT --workers 4 qml.api.main_api:app
+python -m gunicorn --timeout 1500 --bind 0.0.0.0:$FLASK_API_PORT --workers 4 qml.api.main_api:app

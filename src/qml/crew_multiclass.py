@@ -5,8 +5,8 @@ from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 
-# Your custom schema for the leader's final structured output
-from qml.schemas.agents_roles import Specialist  # keep your Pydantic model
+# Your custom schemas
+from qml.schemas.agents_roles import Specialist, LeaderDecision  # specialist votes and leader decision
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
@@ -363,6 +363,15 @@ class CyberPredictMult:
                 self.analyze_and_vote_ddos_udp(),
                 self.analyze_and_vote_ddos_icmp(),
             ],
+            expected_output=(
+                "Return STRICT JSON only, exactly in this schema: "
+                "{\"predictions\":[<int>], \"report\":\"<short explanation>\"}. "
+                "Rules: Do NOT include any text before/after the JSON. Do NOT use code fences. "
+                "Do NOT include <think> hidden thoughts or LaTeX (e.g., \\boxed{N}). "
+                "Use only integers for predictions (single element list), e.g., [10]. "
+                "If uncertain, return {\"predictions\":[99], \"report\":\"Normal\"}."
+            ),
+            output_pydantic=LeaderDecision,
             output_file='src/qml/output/final_prediction.txt',
         )
 

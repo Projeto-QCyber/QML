@@ -366,36 +366,104 @@ def analisar_pacote():
                 print(f"[{req_id}] [MULT] Saída bruta (até 1000 chars): {raw_text_mult[:1000]}", flush=True)
             except Exception as e:
                 print(f"[{req_id}] [MULT] Falha ao obter saída bruta: {e}", flush=True)
-            mult_output = extract_json_from_string(getattr(result_mult, "raw", str(result_mult)))
-            try:
-                keys = list(mult_output.keys()) if isinstance(mult_output, dict) else str(type(mult_output))
-                print(f"[{req_id}] [MULT] JSON extraído: {keys}", flush=True)
-            except Exception:
-                print(f"[{req_id}] [MULT] JSON extraído: tipo desconhecido", flush=True)
 
-            if isinstance(mult_output, dict) and mult_output.get("predictions"):
-                tipo_ataque_id = mult_output["predictions"][0]
-            else:
-                print(f"[{req_id}] ❌ A análise multiclasse falhou ou não retornou predições.", flush=True)
-                return jsonify({"error": "Multiclass crew failed to return predictions"}), 502
+            # ---------- Tolerant parsing for leader output ----------
+            def _strip_think_tags(t):
+                try:
+                    return re.sub(r"<think>.*?</think>", "", t or "", flags=re.DOTALL | re.IGNORECASE)
+                except Exception:
+                    return t or ""
+
+            def _tolerant_parse_predictions_and_report(text):
+                route = []
+                s = _strip_think_tags(text or "")
+                obj = extract_json_from_string(s)
+                preds = None
+                report = None
+                if isinstance(obj, dict):
+                    route.append("json")
+                    raw_preds = obj.get("predictions") or obj.get("votes")
+                    if isinstance(raw_preds, list):
+                        try:
+                            preds = [int(x) for x in raw_preds]
+                        except Exception:
+                            preds = extract_first_int_list_from_text(str(raw_preds))
+                    elif isinstance(raw_preds, str):
+                        preds = extract_first_int_list_from_text(raw_preds)
+                    report = obj.get("report") or obj.get("explanation") or None
+
+                # Fallback 1: first [..] list in text
+                if not preds:
+                    arr = extract_first_int_list_from_text(s)
+                    if arr:
+                        route.append("list")
+                        preds = arr
+
+                # Fallback 2: LaTeX \boxed{N}
+                if not preds:
+                    m = re.search(r"\\boxed\{\s*(-?\d+)\s*\}", s)
+                    if m:
+                        route.append("boxed")
+                        try:
+                            preds = [int(m.group(1))]
+                        except Exception:
+                            preds = None
+
+                # Fallback 3: "class N" pattern
+                if not preds:
+                    m2 = re.search(r"\bclass\s*[:=]?\s*(\d{1,3})\b", s, re.IGNORECASE)
+                    if m2:
+                        route.append("classN")
+                        try:
+                            preds = [int(m2.group(1))]
+                        except Exception:
+                            preds = None
+
+                # Final fallback: safe default
+                if not preds:
+                    route.append("default99")
+                    preds = [99]
+
+                # Build report
+                if not isinstance(report, str) or not report.strip():
+                    # Derive minimal, clean report from the sanitized text
+                    report_candidate = re.sub(r"```.*?```", "", s, flags=re.DOTALL)
+                    report_candidate = re.sub(r"\[.*?\]", "", report_candidate, flags=re.DOTALL)
+                    report_candidate = re.sub(r"\\boxed\{.*?\}", "", report_candidate)
+                    report_candidate = re.sub(r"\s+", " ", report_candidate).strip()
+                    report = report_candidate if report_candidate else "Sem explicação fornecida pelo líder."
+
+                try:
+                    print(f"[{req_id}] [MULT] Parser route: {'>'.join(route)} | preds={preds} | report_len={len(report)}", flush=True)
+                except Exception:
+                    pass
+
+                return {"predictions": preds, "report": report}
+
+            raw_text_mult = getattr(result_mult, "raw", str(result_mult))
+            mult_output = _tolerant_parse_predictions_and_report(raw_text_mult)
+
+            preds = mult_output.get("predictions", [])
+            try:
+                tipo_ataque_id_cast = int(preds[0])
+            except Exception:
+                print(f"[{req_id}] ❌ Multiclasse: 'predictions[0]' não é inteiro ou ausente: {preds}", flush=True)
+                tipo_ataque_id_cast = 99
+
+            print(f"[{req_id}] [MULT] Predição final do líder (tolerant): {tipo_ataque_id_cast}", flush=True)
+
             conn = get_db_connection()
             with conn.cursor() as cursor:
-                tipo_ataque_fk, tipo_ataque_nome = resolve_tipo_ataque_id(cursor, tipo_ataque_id)
-                # Mantenha 'tipo_ataque_label' sempre como string legível
+                tipo_ataque_fk, tipo_ataque_nome = resolve_tipo_ataque_id(cursor, tipo_ataque_id_cast)
                 tipo_ataque_label = tipo_ataque_nome
                 print(f"[{req_id}] [MULT] Label de ataque selecionado: ({tipo_ataque_fk}, '{tipo_ataque_nome}')", flush=True)
             conn.close()
-            
 
-            # Explicação do líder (multiclasse) com fallback para binário
-            explanation_text = None
-            if isinstance(mult_output, dict):
-                explanation_text = mult_output.get("report")
-            if not explanation_text and isinstance(bin_output, dict):
-                explanation_text = bin_output.get("report")
-            if not explanation_text:
-                explanation_text = "Sem explicação fornecida pelo líder."
-            print(f"[{req_id}] [MULT] Tamanho do relatório do líder: {len(explanation_text or '')}", flush=True)
+            # Explicação do líder (tolerant, sempre string)
+            explanation_text = mult_output.get("report") or "Sem explicação fornecida pelo líder."
+            if not isinstance(explanation_text, str):
+                explanation_text = str(explanation_text)
+            print(f"[{req_id}] [MULT] Tamanho do relatório do líder: {len(explanation_text)}", flush=True)
 
             # Plano de resposta ao incidente (markdown) somente se não for 'Normal'
             incident_plan = ""
@@ -500,6 +568,43 @@ def analisar_pacote():
 
             conn.commit()
         conn.close()
+
+        # Single-line snapshot for unit tests
+        try:
+            snapshot = {
+                "req_id": req_id,
+                "device_id": device_id,
+                "bin": {
+                    "raw": locals().get("raw_text_bin", ""),
+                    "json": locals().get("bin_output", None),
+                    "preds": locals().get("preds", []),
+                    "is_attack": locals().get("is_attack", False),
+                    "skip_mult": locals().get("skip_mult", False),
+                },
+                "mult": {
+                    "raw": locals().get("raw_text_mult", ""),
+                    "json": locals().get("mult_output", None),
+                    "pred": locals().get("tipo_ataque_id_cast", None),
+                    "label": locals().get("tipo_ataque_label", None),
+                    "report": locals().get("explanation_text", None),
+                },
+                "incident": {
+                    "plan": locals().get("incident_plan", ""),
+                },
+                "db": {
+                    "tipo_ataque_fk": locals().get("tipo_ataque_fk", None),
+                    "tipo_ataque_nome": locals().get("tipo_ataque_nome", None),
+                    "dispositivo_id": locals().get("dispositivo_id", None),
+                },
+                "response": {
+                    "deteccao_id": locals().get("new_detection_id", None),
+                    "incidente_id": locals().get("new_incidente_id", None),
+                }
+            }
+            print("[UNIT] " + json.dumps(snapshot, ensure_ascii=False), flush=True)
+        except Exception as _unit_err:
+            # Do not break API if snapshot fails; just log a short note
+            print(f"[{req_id}] [UNIT] Snapshot failed: {_unit_err}", flush=True)
 
         print(f"[{req_id}] 💾 Detecção #{new_detection_id} salva no banco de dados.", flush=True)
         try:
