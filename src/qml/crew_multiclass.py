@@ -367,7 +367,7 @@ class CyberPredictMult:
                 "Return STRICT JSON only, exactly in this schema: "
                 "{\"predictions\":[<int>], \"report\":\"<short explanation>\"}. "
                 "Rules: Do NOT include any text before/after the JSON. Do NOT use code fences. "
-                "Do NOT include <think> hidden thoughts or LaTeX (e.g., \\boxed{N}). "
+                "Do NOT include <think> hidden thoughts or LaTeX (e.g., \\boxed). "
                 "Use only integers for predictions (single element list), e.g., [10]. "
                 "If uncertain, return {\"predictions\":[99], \"report\":\"Normal\"}."
             ),
