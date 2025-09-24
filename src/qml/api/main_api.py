@@ -8,7 +8,7 @@ import pandas as pd
 import pymysql
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
-from datetime import datetime
+from datetime import datetime, timezone
 from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
 
@@ -201,8 +201,8 @@ def analisar_pacote():
     """
     Recebe dados de um "pacote", executa a análise com a crew e salva o resultado no banco.
     """
-    req_id = f"REQ-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{random.randint(1000,9999)}"
-    start_ts = datetime.now()
+    req_id = f"REQ-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{random.randint(1000,9999)}"
+    start_ts = datetime.now(timezone.utc)
     print(f"\n[{start_ts}] [{req_id}] Nova requisição recebida em /analisar de {request.remote_addr}", flush=True)
     
     # 1. Valida os dados de entrada
@@ -539,7 +539,7 @@ def analisar_pacote():
             INSERT INTO deteccoes (data_deteccao, dispositivo_id, predicao, tipo_ataque_id, relatorio_api, status_resposta_id, incidente_id)
             VALUES (%s, %s, %s, %s, %s, %s, NULL)
             """
-            cursor.execute(sql_det, (datetime.now(), dispositivo_id, tipo_ataque_fk, tipo_ataque_fk, relatorio_api_text, status_pendente_id))
+            cursor.execute(sql_det, (datetime.now(timezone.utc), dispositivo_id, tipo_ataque_fk, tipo_ataque_fk, relatorio_api_text, status_pendente_id))
             new_detection_id = cursor.lastrowid
 
             new_incidente_id = None
@@ -560,7 +560,7 @@ def analisar_pacote():
                 INSERT INTO incidentes_analisados (titulo, status_id, dispositivo_id, nivel_risco_id, data_deteccao, resumo_tecnico, explicacao_llm, acoes_recomendadas)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                cursor.execute(sql_inc, (titulo, status_inc_aberto, dispositivo_id, nivel_risco_id, datetime.now(), resumo_tecnico, explanation_text, acoes_json))
+                cursor.execute(sql_inc, (titulo, status_inc_aberto, dispositivo_id, nivel_risco_id, datetime.now(timezone.utc), resumo_tecnico, explanation_text, acoes_json))
                 new_incidente_id = cursor.lastrowid
 
                 # Atualiza detecção com incidente e status 'Análise Manual Necessária'
@@ -608,7 +608,7 @@ def analisar_pacote():
 
         print(f"[{req_id}] 💾 Detecção #{new_detection_id} salva no banco de dados.", flush=True)
         try:
-            duration = (datetime.now() - start_ts).total_seconds()
+            duration = (datetime.now(timezone.utc) - start_ts).total_seconds()
             print(f"[{req_id}] ⏱️ Duração total da requisição: {duration:.2f}s", flush=True)
         except Exception:
             pass

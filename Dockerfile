@@ -1,5 +1,5 @@
 # Dockerfile
-FROM python:3.11.13-slim
+FROM python:3.12.11-slim
 
 # Set the working directory in the container
 WORKDIR /app
