@@ -93,12 +93,32 @@ def extract_first_int_list_from_text(text):
 
 
 
+def _resolve_mysql_host() -> str:
+    """
+    Decide the proper MySQL host:
+    - When running inside Docker, use the service name 'mysql'
+    - When running locally (no Docker indicators), default to 'localhost'
+    - Allow explicit overrides via MYSQL_HOST env var
+    """
+    env_host = (os.getenv('MYSQL_HOST') or '').strip()
+    if env_host:
+        if env_host == 'mysql':
+            if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
+                return env_host
+            return 'localhost'
+        return env_host
+
+    if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
+        return 'mysql'
+    return 'localhost'
+
+
 def get_db_connection():
     """Cria e retorna uma nova conexão com o banco para cada requisição.
     Usa variáveis de ambiente com fallbacks robustos e ignora valores vazios.
     """
     # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
-    db_host = get_env_var('MYSQL_HOST', 'mysql')
+    db_host = _resolve_mysql_host()
     db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
     db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
     db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'

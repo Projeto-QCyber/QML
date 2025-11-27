@@ -33,6 +33,12 @@ class RFModel(BaseTool):
         try:
             df_input = pd.DataFrame(samples)
 
+            # Remove any label columns accidentally sent with the sample payload
+            df_input = df_input.drop(
+                columns=[col for col in df_input.columns if col.lower() == "attack_label"],
+                errors="ignore",
+            )
+
             # Garante que as colunas estão na ordem usada no treino
             if hasattr(self.model, "feature_names_in_"):
                 missing = set(self.model.feature_names_in_) - set(df_input.columns)
