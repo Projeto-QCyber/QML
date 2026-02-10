@@ -2,7 +2,6 @@ services:
   flask-api:
     depends_on: 
       - mysql
-      - ollama
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,6 +19,7 @@ services:
 
   
   ollama:
+    profiles: ["ollama"]
     image: ollama/ollama:latest
     container_name: qcyber_ollama
     volumes:
@@ -47,7 +47,7 @@ services:
     volumes:
       - ./mysql_volume:/var/lib/mysql
     ports:
-      - ${MYSQL_PORT}:3306
+      - "${MYSQL_PORT:-50000}:3306"
     networks:
       - qcyber-network
 
