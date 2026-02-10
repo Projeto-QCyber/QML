@@ -20,12 +20,14 @@ dependencies = [
     "matplotlib>=3.10.6",
     "mysql>=0.0.3",
     "mysql-connector-python>=9.4.0",
+    "numpy>=2.0.0",
     "pandas>=2.3.2",
     "pennylane>=0.42.3",
     "pymysql>=1.1.2",
     "python-dotenv>=1.1.1",
     "scikit-learn==1.6.1",
     "shap>=0.48.0",
+    "torch>=2.0.0",
 ]
 
 [project.scripts]

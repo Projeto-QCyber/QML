@@ -15,6 +15,7 @@ generate_response_plan:
     - **Password Attacks:** Block source IPs, force a password reset for all users, implement MFA and an account lockout policy.
     - **Reconnaissance (Fingerprinting, Port Scanning, Vulnerability Scanner):** Block source IPs, analyze target ports/services to understand the attacker's intent, close unnecessary ports.
     - **Uploading (Malicious):** Isolate the server, delete the file, scan the system for other payloads, implement strict upload validation.
+    - **Outras (Other/Uncategorized):** Isolate the affected system, collect full packet captures and logs for forensic analysis, escalate to the SOC for manual triage, and monitor for recurring anomalous patterns.
 
   expected_output: >
     A clear markdown report detailing the response plan for the specified attack type. The report should be well-structured,

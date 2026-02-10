@@ -25,16 +25,18 @@ analyze_and_vote_1:
     You are provided with EXACTLY this JSON array of 5 samples:
     {samples}
 
-    Your job is ONLY to call the tool "Model" with arguments as a JSON OBJECT (not a string):
+    You may call one or both available tools: "Model" and "quantum_model".
+    Decide if and when to use each tool.
+    If you call a tool, use arguments as a JSON OBJECT (not a string):
     {"samples": <the JSON array above>}
 
     Strict rules for the tool call:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
     - Do NOT reformat or alter the samples in any way.
-    - Output EXACTLY and ONLY what the tool returns (e.g., [0/1,...]).
+    - Return ONLY a final list of 5 binary votes (0/1), e.g. [0,1,0,1,0].
   expected_output: >
-    A list of 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of 5 binary votes (0 or 1).
   agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
@@ -42,15 +44,18 @@ analyze_and_vote_2:
     You are an AI agent independently analyzing the SAME 5 samples:
     {samples}
 
-    Your job is ONLY to call the tool "Model" with arguments as a JSON OBJECT (not a string):
+    You may call one or both available tools: "Model" and "quantum_model".
+    Decide if and when to use each tool.
+    If you call a tool, use arguments as a JSON OBJECT (not a string):
     {"samples": <the JSON array above>}
 
     Strict rules for the tool call:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
-    - Do NOT modify the data in any way. Output EXACTLY the result from the tool.
+    - Do NOT modify the data in any way.
+    - Return ONLY a final list of 5 binary votes (0/1), e.g. [1,0,0,1,1].
   expected_output: >
-    A list of 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of 5 binary votes (0 or 1).
   agent: cybersecurity_analyst_2
 
 

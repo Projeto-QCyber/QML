@@ -22,9 +22,9 @@ class RFModel(BaseTool):
 
     def __init__(self, model_path: str = None, classification: Literal["multiclass", "binary"] = "binary", **kwargs):
         if classification == "multiclass":
-            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
+            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult_q.joblib"
         elif classification == "binary" and model_path is None:
-            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin_q.joblib"
 
         loaded_model = joblib.load(model_path)
         super().__init__(model=loaded_model, **kwargs)
@@ -33,11 +33,10 @@ class RFModel(BaseTool):
         try:
             df_input = pd.DataFrame(samples)
 
-            # Remove any label columns accidentally sent with the sample payload
-            df_input = df_input.drop(
-                columns=[col for col in df_input.columns if col.lower() == "attack_label"],
-                errors="ignore",
-            )
+            # Remove label / metadata columns that are not model features
+            drop_cols = [c for c in df_input.columns
+                         if c.lower() in {"attack_label", "attack_type", "split"}]
+            df_input = df_input.drop(columns=drop_cols, errors="ignore")
 
             # Garante que as colunas estão na ordem usada no treino
             if hasattr(self.model, "feature_names_in_"):

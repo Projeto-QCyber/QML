@@ -20,7 +20,8 @@ wheels/
 .idea/
 
 # Weights model
-IA/weights/traditional/
+IA/weights/traditional/random_forest_model_bin.joblib
+IA/weights/traditional/random_forest_model_mult.joblib
 
 # Docker volumes
 mysql_volume

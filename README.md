@@ -71,7 +71,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 ```bash
-ollama run qwen3:8b-q4_K_M
+ollama run qwen2.5:7b-instruct-q4_K_M
 ```
 
 #### 4.2. Com Docker
@@ -85,7 +85,7 @@ docker compose up ollama
 
 ##### 4.2.3. Rodar o Modelo;
 ```bash
-docker exec -it qcyber_ollama ollama run qwen3:8b-q4_K_M
+docker exec -it qcyber_ollama ollama run qwen2.5:7b-instruct-q4_K_M
 ```
 
 <br>

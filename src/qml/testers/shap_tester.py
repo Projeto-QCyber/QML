@@ -8,7 +8,7 @@ from qml.tools.shap_explain import load_model, save_waterfalls, save_violin_by_l
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
-DATA_PATH = ROOT_DIR / "data/dados_de_teste.csv"
+DATA_PATH = ROOT_DIR / "data/dados_de_teste_q.csv"
 
 
 def _resolve_model_path() -> Path:
@@ -22,8 +22,8 @@ def _resolve_model_path() -> Path:
     prefer = os.getenv("QML_SHAP_MODEL", "mult").strip().lower()
     env_mult = os.getenv("QML_RF_MODEL_MULT_PATH")
     env_bin = os.getenv("QML_RF_MODEL_BIN_PATH")
-    default_mult = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
-    default_bin = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+    default_mult = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult_q.joblib"
+    default_bin = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin_q.joblib"
 
     def ok(p: Optional[str | Path]) -> Optional[Path]:
         if not p:

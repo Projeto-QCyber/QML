@@ -8,8 +8,8 @@ pid=$!
 # Pause briefly for Ollama to start.
 sleep 5
 
-echo "🔴 Retrieve Qwen3 8B q4_K_M Model"
-ollama pull qwen3:8b-q4_K_M || echo "Model pull failed or already present. Continuing..."
+echo "🔴 Retrieve Qwen2.5 7B Instruct q4_K_M Model"
+ollama pull qwen2.5:7b-instruct-q4_K_M || echo "Model pull failed or already present. Continuing..."
 echo "🟢 Done!"
 
 # Wait for Ollama process to finish.

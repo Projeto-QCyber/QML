@@ -57,7 +57,7 @@ def recreate_database():
             label_map = {
                 'Backdoor': 0, 'DDoS_HTTP': 1, 'DDoS_ICMP': 2, 'DDoS_TCP': 3, 'DDoS_UDP': 4,
                 'Fingerprinting': 5, 'MITM': 6, 'Password': 7, 'Port_Scanning': 8, 'Ransomware': 9,
-                'SQL_injection': 10, 'Uploading': 11, 'Vulnerability_scanner': 12, 'XSS': 13, 'Normal': 99
+                'SQL_injection': 10, 'Uploading': 11, 'Vulnerability_scanner': 12, 'XSS': 13, 'Outras': 14, 'Normal': 99
             }
             for nome, id_ataque in label_map.items():
                 cursor.execute("INSERT INTO enum_tipo_ataque (id, nome, descricao) VALUES (%s, %s, %s)",

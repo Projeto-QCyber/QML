@@ -4,6 +4,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 from qml.schemas.agents_roles import Specialist
 from qml.tools.model import RFModel
+from qml.tools.quantum_model import QuantumModel
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
 
@@ -21,7 +22,7 @@ class CyberPredict:
     def cybersecurity_analyst_1(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_1'],
-            tools=[RFModel()],
+            tools=[RFModel(), QuantumModel()],
             llm=_llm_default(),
             verbose=True
         )
@@ -30,7 +31,7 @@ class CyberPredict:
     def cybersecurity_analyst_2(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_2'],
-            tools=[RFModel()],
+            tools=[RFModel(), QuantumModel()],
             llm=_llm_default(),
             verbose=True,
         )

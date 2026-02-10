@@ -3,7 +3,7 @@ import pandas as pd, requests
 from dotenv import load_dotenv; load_dotenv()
 
 API_URL = f"http://localhost:{os.getenv('FLASK_API_PORT',5000)}/analisar"
-df = pd.read_csv("data/dados_de_teste.csv")
+df = pd.read_csv("data/dados_de_teste_q.csv")
 att = df[df.Attack_type != 7]
 first3 = att.sample(3, replace=len(att)<3)
 rest = df.drop(first3.index)

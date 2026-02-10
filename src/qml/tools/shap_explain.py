@@ -304,9 +304,9 @@ class ExplainTop2SHAP:
             return env_path
 
         default_path = (
-            ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
+            ROOT_DIR / "IA/weights/traditional/random_forest_model_mult_q.joblib"
             if self.classification == "multiclass"
-            else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+            else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin_q.joblib"
         )
         if default_path.exists():
             return default_path
@@ -332,7 +332,7 @@ class ExplainTop2SHAP:
         env_bg = os.getenv("QML_SHAP_BACKGROUND_CSV")
         if env_bg:
             candidates.append(Path(env_bg))
-        default_bg = ROOT_DIR / "data/dados_de_teste.csv"
+        default_bg = ROOT_DIR / "data/dados_de_teste_q.csv"
         if default_bg.exists():
             candidates.append(default_bg)
 

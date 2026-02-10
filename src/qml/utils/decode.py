@@ -12,7 +12,8 @@ label_map = {
     'SQL_injection': 10,
     'Uploading': 11,
     'Vulnerability_scanner': 12,
-    'XSS': 13
+    'XSS': 13,
+    'Outras': 14
 }
 
 def decode_type_attack(array_list):
