@@ -17,8 +17,6 @@ services:
        - MYSQL_PORT=3306  # sobreescrita
     networks:
       - qcyber-network
-
-  
   ollama:
     image: ollama/ollama:latest
     container_name: qcyber_ollama
@@ -37,7 +35,6 @@ services:
               capabilities: [gpu]
     networks:
       - qcyber-network
-
   mysql:
     image: mysql:9.4.0
     container_name: qcyber_mysql
@@ -50,9 +47,6 @@ services:
       - ${MYSQL_PORT}:3306
     networks:
       - qcyber-network
-
-
-
 networks:
   qcyber-network:
     driver: bridge

@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Any
 
-from qml.crew import CyberPredict
+from qml.services.detection import BatchDetectionService, build_detection_report
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -48,11 +48,12 @@ def run() -> None:
 
     if labels:
         print(f"Loaded sample labels: {labels}")
-    print(f"Running CyberPredict with {len(samples)} samples...")
+    print(f"Running optimized batch detection with {len(samples)} samples...")
 
-    result = CyberPredict().crew().kickoff(inputs={"samples": samples})
-    raw_result = getattr(result, "raw", str(result))
-    print(json.dumps({"result": raw_result}, ensure_ascii=False, indent=2))
+    result = BatchDetectionService().predict(samples)
+    payload = result.to_dict()
+    payload["report"] = build_detection_report(result)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

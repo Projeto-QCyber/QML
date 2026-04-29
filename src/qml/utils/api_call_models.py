@@ -1,11 +1,12 @@
-from crewai import LLM
 import os
+from crewai import LLM
+
 # -----------------------------------------------------------------------------
 # Helper factories to avoid duplication
 # -----------------------------------------------------------------------------
 
 _OPENAI_MODEL: str = "gpt-5-mini"
-_OPENAI_API_KEY: str = "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"
+_OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 _OPENAI_BASE_URL: str = "https://api.openai.com/v1"
 
 

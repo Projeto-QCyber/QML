@@ -318,6 +318,7 @@ def ensure_bootstrap():
     """
     load_dotenv()
     db_name = os.getenv('MYSQL_DB', 'qcyber_db')
+    app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").strip().lower()
     try:
         _host = os.getenv('MYSQL_HOST') or 'mysql'
         _user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
@@ -347,9 +348,16 @@ def ensure_bootstrap():
                 critical_present = cursor.fetchone()[0]
 
                 if critical_present < 4 and got_lock:
+                    if app_env in {"production", "prod"}:
+                        print("❌ Estrutura crítica ausente e APP_ENV=production. Recusando recriar banco automaticamente.")
+                        cursor.execute("SELECT RELEASE_LOCK(%s)", ("qcyber_bootstrap_lock",))
+                        got_lock = False
+                        conn.close()
+                        return False
                     print("⚠️ Estrutura crítica ausente. Recriando banco de dados (ambiente de dev/test)...")
                     # Libera lock antes de recriar para evitar reentrância após drop
                     cursor.execute("SELECT RELEASE_LOCK(%s)", ("qcyber_bootstrap_lock",))
+                    got_lock = False
                     conn.close()
                     return recreate_database()
 

@@ -12,10 +12,9 @@ from datetime import datetime, timezone
 from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
 
-# Importe suas classes da crewai
-from qml.crew import CyberPredict
-from qml.crew_multiclass import CyberPredictMult
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 from qml.response import IncidentResponseCrew
+from qml.services.detection import BatchDetectionService, build_detection_report
 from qml.tools.shap_explain import ExplainTop2SHAP
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
@@ -245,8 +244,7 @@ def analisar_pacote():
         if samples_payload and isinstance(samples_payload, list):
             # Recebemos múltiplas amostras já no payload
             x_test = pd.DataFrame(samples_payload)
-            inputs_for_bin_crew = {"samples": samples_payload}
-            inputs_for_mult_crew = {"samples": samples_payload}
+            inputs_for_detection = {"samples": samples_payload}
             try:
                 first_keys = list(samples_payload[0].keys()) if samples_payload else []
                 print(f"[{req_id}] Modo multi-amostras: {len(samples_payload)} amostras | primeiras chaves: {first_keys[:10]}", flush=True)
@@ -257,200 +255,84 @@ def analisar_pacote():
                 return jsonify({"error": "Payload inválido. Envie 'samples' (lista) ou 'features' (objeto)."}), 400
             x_test = pd.DataFrame([features])
             input_records_single = x_test.to_dict(orient='records')  # lista com 1 dict
-            # A crew binária exige exatamente 5 amostras, então duplicamos a mesma amostra.
-            inputs_for_bin_crew = {'samples': input_records_single * 5}
-            # A crew multiclasse usa 1 amostra.
-            inputs_for_mult_crew = {'samples': input_records_single}
+            inputs_for_detection = {'samples': input_records_single}
             try:
-                print(f"[{req_id}] Modo single-feature: {len(features.keys())} chaves | duplicando para 5 amostras para binário", flush=True)
+                print(f"[{req_id}] Modo single-feature: {len(features.keys())} chaves", flush=True)
             except Exception:
                 print(f"[{req_id}] Modo single-feature: não foi possível contar chaves de 'features'", flush=True)
 
         try:
-            print(f"[{req_id}] x_test shape={x_test.shape} | bin_samples={len(inputs_for_bin_crew.get('samples', []))} | mult_samples={len(inputs_for_mult_crew.get('samples', []))}", flush=True)
+            print(f"[{req_id}] x_test shape={x_test.shape} | detection_samples={len(inputs_for_detection.get('samples', []))}", flush=True)
         except Exception as e:
             print(f"[{req_id}] Falha ao inspecionar x_test ou inputs: {e}", flush=True)
 
-        # 3. Executa a análise da crew (binária e multiclasse)
-        # NOTA: A sua crew binária parece não ser mais necessária se o CSV só tem ataques,
-        # mas mantive a lógica caso você use outros dados no futuro.
-        print(f"[{req_id}] [BIN] Iniciando crew binária com {len(inputs_for_bin_crew.get('samples', []))} amostras...", flush=True)
-        result_bin = CyberPredict().crew().kickoff(inputs=inputs_for_bin_crew)
-        print(f"[{req_id}] [BIN] Crew binária finalizada. Tipo de retorno: {type(result_bin)}", flush=True)
-        try:
-            raw_text_bin = getattr(result_bin, "raw", str(result_bin))
-            print(f"[{req_id}] [BIN] Saída bruta (até 1000 chars): {raw_text_bin[:1000]}", flush=True)
-        except Exception as e:
-            print(f"[{req_id}] [BIN] Falha ao obter saída bruta: {e}", flush=True)
-        bin_output = extract_json_from_string(getattr(result_bin, "raw", str(result_bin)))
-        print(f"[{req_id}] [BIN] JSON extraído: {list(bin_output.keys()) if isinstance(bin_output, dict) else type(bin_output)}", flush=True)
-        
-        preds = []
-        if isinstance(bin_output, dict):
-            preds = bin_output.get("predictions") or bin_output.get("votes") or []
-        if not preds:
-            # Fallback: tenta extrair a primeira lista de inteiros do texto bruto
-            preds = extract_first_int_list_from_text(getattr(result_bin, "raw", str(result_bin)))
-        print(f"[{req_id}] [BIN] Predições extraídas: {preds}", flush=True)
-        # Falha explícita se não houve predições do binário (evita mascarar como 'Normal')
-        if preds is None or len(preds) == 0:
-            print(f"[{req_id}] [BIN] ❌ Nenhuma predição retornada pela crew binária.", flush=True)
-            return jsonify({"error": "Nenhuma predição retornada pela crew binária"}), 502
-        # Se múltiplas amostras foram enviadas, considere ataque se qualquer for 1
-        is_attack = any(int(p) == 1 for p in preds)
+        # 3. Executa predição determinística por batch.
+        # O modelo binário avalia a janela inteira; se houver amostras suspeitas,
+        # o multiclasse roda somente nelas e consolida um tipo primário.
+        samples_for_detection = inputs_for_detection.get("samples", [])
+        print(f"[{req_id}] [BIN] Iniciando predição direta com {len(samples_for_detection)} amostras...", flush=True)
+        detection_result = BatchDetectionService().predict(samples_for_detection)
+        bin_preds = detection_result.binary_predictions
+        raw_text_bin = json.dumps(detection_result.to_dict(), ensure_ascii=False)
+        bin_output = {
+            "predictions": bin_preds,
+            "attack_indices": detection_result.attack_indices,
+            "window_has_attack": detection_result.window_has_attack,
+        }
+
+        print(f"[{req_id}] [BIN] Predições: {bin_preds} | suspeitas={detection_result.attack_indices}", flush=True)
+        if not bin_preds:
+            print(f"[{req_id}] [BIN] ❌ Nenhuma predição retornada pelo modelo binário.", flush=True)
+            return jsonify({"error": "Nenhuma predição retornada pelo modelo binário"}), 502
+
+        is_attack = detection_result.window_has_attack
         skip_mult = not is_attack
         if skip_mult:
-            print(f"[{req_id}] ➡️ Evento não classificado como ataque pela crew binária. Prosseguindo com fallback para 'Normal'.", flush=True)
+            print(f"[{req_id}] ➡️ Janela sem ataque pelo modelo binário. Registrando como 'Normal'.", flush=True)
 
-        # 3.1. Seleciona a PRIMEIRA amostra classificada como ATAQUE para a multiclasse
-        attack_index = None
-        try:
-            for i, p in enumerate(preds):
-                if int(p) == 1:
-                    attack_index = i
-                    break
-        except Exception as e:
-            print(f"[{req_id}] [MULT] Falha ao determinar índice do ataque a partir de preds={preds}: {e}", flush=True)
-
-        if samples_payload and isinstance(samples_payload, list) and attack_index is not None and 0 <= attack_index < len(samples_payload):
-            chosen_sample = samples_payload[attack_index]
-            mult_inputs = {"samples": [chosen_sample]}
-            try:
-                preview_keys = list(chosen_sample.keys())[:10]
-                print(f"[{req_id}] [MULT] Usando amostra de índice {attack_index} (primeira com voto=1) | primeiras chaves: {preview_keys}", flush=True)
-            except Exception:
-                print(f"[{req_id}] [MULT] Usando amostra de índice {attack_index} (primeira com voto=1)", flush=True)
-        elif isinstance(features, dict):
-            # Caso single-feature, já temos 1 amostra
-            mult_inputs = {'samples': [features]}
-            print(f"[{req_id}] [MULT] Modo single-feature -> enviando a única amostra para multiclasse", flush=True)
-        else:
-            # Fallback: não foi possível mapear índice -> envia a primeira amostra disponível
-            fallback_sample = samples_payload[0] if isinstance(samples_payload, list) and samples_payload else None
-            mult_inputs = {'samples': [fallback_sample]} if fallback_sample else inputs_for_mult_crew
-            print(f"[{req_id}] [MULT] Fallback -> enviando a primeira amostra para multiclasse", flush=True)
-
-        # Se binário indicou não-ataque, assume 'Normal' e não roda multiclasse
+        # Se binário indicou não-ataque, assume 'Normal' e não roda multiclasse/IR
         if skip_mult:
             tipo_ataque_label = "Normal"
             explanation_text = "Sem explicação fornecida pelo líder."
             incident_plan = ""
         else:
-            print(f"[{req_id}] [MULT] Iniciando crew multiclasse; qtd_amostras={len(mult_inputs.get('samples', []))}", flush=True)
+            suspicious_samples = [samples_for_detection[idx] for idx in detection_result.attack_indices]
+            print(
+                f"[{req_id}] [MULT] Classificação direta concluída para "
+                f"{len(suspicious_samples)} amostra(s) suspeita(s): "
+                f"{[item.attack_type_label for item in detection_result.classified_attacks]}",
+                flush=True,
+            )
 
             shap_explanation = ""
             try:
                 # Use the centralized SHAP tool (handles model loading/caching and SHAP shapes)
-                sample_for_shap = mult_inputs['samples'][0]
                 print(f"[{req_id}] [SHAP] Preparing ExplainTop2SHAP for multiclass...", flush=True)
                 explainer_tool = ExplainTop2SHAP(classification="multiclass")
 
                 # Ensure feature ordering matches the model training schema
                 if hasattr(explainer_tool.model, "feature_names_in_"):
-                    ordered_sample = {k: float(sample_for_shap.get(k, 0.0)) for k in explainer_tool.model.feature_names_in_}
+                    ordered_samples = [
+                        {k: float(sample.get(k, 0.0)) for k in explainer_tool.model.feature_names_in_}
+                        for sample in suspicious_samples
+                    ]
                 else:
-                    ordered_sample = sample_for_shap
+                    ordered_samples = suspicious_samples
 
-                shap_explanation = explainer_tool._run([ordered_sample])
+                shap_explanation = explainer_tool._run(ordered_samples)
                 print(f"[{req_id}] [SHAP] Explanation generated: {shap_explanation}", flush=True)
-                mult_inputs['shap_explanation'] = shap_explanation
-                print(f"[{req_id}] [SHAP] Explanation added to crew context.", flush=True)
             except Exception as e:
-                mult_inputs['shap_explanation'] = ""
                 print(f"[{req_id}] ⚠️ [SHAP] Failed to generate explanation: {e}", flush=True)
 
-            result_mult = CyberPredictMult().crew().kickoff(inputs=mult_inputs)
-            print(f"[{req_id}] [MULT] Crew multiclasse finalizada. Tipo de retorno: {type(result_mult)}", flush=True)
-            try:
-                raw_text_mult = getattr(result_mult, "raw", str(result_mult))
-                print(f"[{req_id}] [MULT] Saída bruta (até 1000 chars): {raw_text_mult[:1000]}", flush=True)
-            except Exception as e:
-                print(f"[{req_id}] [MULT] Falha ao obter saída bruta: {e}", flush=True)
+            tipo_ataque_id_cast = detection_result.primary_attack_type_id
+            raw_text_mult = json.dumps(detection_result.to_dict(), ensure_ascii=False)
+            mult_output = {
+                "predictions": [tipo_ataque_id_cast],
+                "classified_attacks": detection_result.to_dict()["classified_attacks"],
+                "report": build_detection_report(detection_result, shap_explanation),
+            }
 
-            # ---------- Tolerant parsing for leader output ----------
-            def _strip_think_tags(t):
-                try:
-                    return re.sub(r"<think>.*?</think>", "", t or "", flags=re.DOTALL | re.IGNORECASE)
-                except Exception:
-                    return t or ""
-
-            def _tolerant_parse_predictions_and_report(text):
-                route = []
-                s = _strip_think_tags(text or "")
-                obj = extract_json_from_string(s)
-                preds = None
-                report = None
-                if isinstance(obj, dict):
-                    route.append("json")
-                    raw_preds = obj.get("predictions") or obj.get("votes")
-                    if isinstance(raw_preds, list):
-                        try:
-                            preds = [int(x) for x in raw_preds]
-                        except Exception:
-                            preds = extract_first_int_list_from_text(str(raw_preds))
-                    elif isinstance(raw_preds, str):
-                        preds = extract_first_int_list_from_text(raw_preds)
-                    report = obj.get("report") or obj.get("explanation") or None
-
-                # Fallback 1: first [..] list in text
-                if not preds:
-                    arr = extract_first_int_list_from_text(s)
-                    if arr:
-                        route.append("list")
-                        preds = arr
-
-                # Fallback 2: LaTeX \boxed{N}
-                if not preds:
-                    m = re.search(r"\\boxed\{\s*(-?\d+)\s*\}", s)
-                    if m:
-                        route.append("boxed")
-                        try:
-                            preds = [int(m.group(1))]
-                        except Exception:
-                            preds = None
-
-                # Fallback 3: "class N" pattern
-                if not preds:
-                    m2 = re.search(r"\bclass\s*[:=]?\s*(\d{1,3})\b", s, re.IGNORECASE)
-                    if m2:
-                        route.append("classN")
-                        try:
-                            preds = [int(m2.group(1))]
-                        except Exception:
-                            preds = None
-
-                # Final fallback: safe default
-                if not preds:
-                    route.append("default99")
-                    preds = [99]
-
-                # Build report
-                if not isinstance(report, str) or not report.strip():
-                    # Derive minimal, clean report from the sanitized text
-                    report_candidate = re.sub(r"```.*?```", "", s, flags=re.DOTALL)
-                    report_candidate = re.sub(r"\[.*?\]", "", report_candidate, flags=re.DOTALL)
-                    report_candidate = re.sub(r"\\boxed\{.*?\}", "", report_candidate)
-                    report_candidate = re.sub(r"\s+", " ", report_candidate).strip()
-                    report = report_candidate if report_candidate else "Sem explicação fornecida pelo líder."
-
-                try:
-                    print(f"[{req_id}] [MULT] Parser route: {'>'.join(route)} | preds={preds} | report_len={len(report)}", flush=True)
-                except Exception:
-                    pass
-
-                return {"predictions": preds, "report": report}
-
-            raw_text_mult = getattr(result_mult, "raw", str(result_mult))
-            mult_output = _tolerant_parse_predictions_and_report(raw_text_mult)
-
-            preds = mult_output.get("predictions", [])
-            try:
-                tipo_ataque_id_cast = int(preds[0])
-            except Exception:
-                print(f"[{req_id}] ❌ Multiclasse: 'predictions[0]' não é inteiro ou ausente: {preds}", flush=True)
-                tipo_ataque_id_cast = 99
-
-            print(f"[{req_id}] [MULT] Predição final do líder (tolerant): {tipo_ataque_id_cast}", flush=True)
+            print(f"[{req_id}] [MULT] Tipo primário consolidado: {tipo_ataque_id_cast}", flush=True)
 
             conn = get_db_connection()
             with conn.cursor() as cursor:
@@ -459,7 +341,7 @@ def analisar_pacote():
                 print(f"[{req_id}] [MULT] Label de ataque selecionado: ({tipo_ataque_fk}, '{tipo_ataque_nome}')", flush=True)
             conn.close()
 
-            # Explicação do líder (tolerant, sempre string)
+            # Explicação consolidada do pipeline determinístico.
             explanation_text = mult_output.get("report") or "Sem explicação fornecida pelo líder."
             if not isinstance(explanation_text, str):
                 explanation_text = str(explanation_text)
@@ -522,7 +404,7 @@ def analisar_pacote():
             resumo_detect = f"Detecção: '{tipo_ataque_nome}'"
             partes_relatorio = []
             if explanation_text and explanation_text.strip() and explanation_text.strip().lower() != 'sem explicação fornecida pelo líder.':
-                partes_relatorio.append(f"Relatório de Classificação (Crew):\n{explanation_text.strip()}")
+                partes_relatorio.append(f"Relatório de Classificação:\n{explanation_text.strip()}")
             if incident_plan and str(incident_plan).strip():
                 partes_relatorio.append(f"Plano de Resposta ao Incidente (Crew):\n{str(incident_plan).strip()}")
 
@@ -577,7 +459,7 @@ def analisar_pacote():
                 "bin": {
                     "raw": locals().get("raw_text_bin", ""),
                     "json": locals().get("bin_output", None),
-                    "preds": locals().get("preds", []),
+                    "preds": locals().get("bin_preds", []),
                     "is_attack": locals().get("is_attack", False),
                     "skip_mult": locals().get("skip_mult", False),
                 },
@@ -619,6 +501,11 @@ def analisar_pacote():
             "deteccao_id": new_detection_id,
             "incidente_id": new_incidente_id,
             "tipo_ataque_detectado": tipo_ataque_nome,
+            "batch": {
+                "predicoes_binarias": locals().get("bin_preds", []),
+                "indices_suspeitos": locals().get("detection_result").attack_indices if "detection_result" in locals() else [],
+                "ataques_classificados": locals().get("detection_result").to_dict().get("classified_attacks", []) if "detection_result" in locals() else [],
+            },
         }
         return jsonify(response_payload), 201
 
