@@ -29,3 +29,5 @@ ollama
 src/qml/output/*
 
 repomix-output.xml
+
+.codex
