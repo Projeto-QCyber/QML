@@ -1,6 +1,6 @@
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, task, crew
-from qml.utils.api_call_models import _llm_leader
+from qml.utils.api_call_models import _llm_coder_response, _llm_leader
 from qml.utils.runtime import crew_verbose
 
 @CrewBase
@@ -17,7 +17,7 @@ class IncidentResponseCrew:
         """
         return Agent(
             config=self.agents_config['incident_responder'],
-            llm=_llm_leader(),
+            llm=_llm_coder_response(),
             verbose=crew_verbose(),
             allow_delegation=False,
             max_iter=2,

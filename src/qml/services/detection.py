@@ -231,6 +231,7 @@ class BatchDetectionService:
                 "binary_probability_context": json.dumps(probability_context, ensure_ascii=False),
             }
         )
+        print(f"[DEBUG] results: {result}")
         raw_output = getattr(result, "raw", str(result))
         predictions = _extract_binary_predictions(raw_output)
         if not predictions:
