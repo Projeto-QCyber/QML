@@ -13,7 +13,7 @@ from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
-from qml.response import IncidentResponseCrew
+from qml.crew_response import IncidentResponseCrew
 from qml.services.detection import BatchDetectionService, build_detection_report
 from qml.tools.shap_explain import ExplainTop2SHAP
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'

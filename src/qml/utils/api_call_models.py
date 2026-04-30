@@ -42,6 +42,16 @@ def _llm_leader() -> LLM:
         max_tokens=2048,
         extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
+
+def __llm_coder_response() -> LLM:
+    return LLM(
+        model="ollama/qwen3:8b-q4_K_M",
+        base_url=_get_ollama_base_url(),
+        api_key="ollama",
+        temperature=0.7,
+        max_tokens=2048,
+        extra_body={"stop": ["\n\n", "\n###", "```"]},
+    )
 '''
 
 from crewai import LLM

@@ -48,9 +48,13 @@ def run() -> None:
 
     if labels:
         print(f"Loaded sample labels: {labels}")
-    print(f"Running optimized batch detection with CrewAI binary stage for {len(samples)} samples...")
+    print(f"Running optimized two-stage CrewAI detection with {len(samples)} samples...")
 
-    result = BatchDetectionService(use_binary_crew=True).predict(samples)
+    result = BatchDetectionService(
+        use_binary_crew=True,
+        use_multiclass_crew=True,
+        use_incident_response_crew=True,
+    ).predict(samples)
     payload = result.to_dict()
     payload["report"] = build_detection_report(result)
     print(json.dumps(payload, ensure_ascii=False, indent=2))

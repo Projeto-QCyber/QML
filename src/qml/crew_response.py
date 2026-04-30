@@ -17,7 +17,9 @@ class IncidentResponseCrew:
         return Agent(
             config=self.agents_config['incident_responder'],
             llm=_llm_leader(),
-            verbose=True
+            verbose=True,
+            allow_delegation=False,
+            max_iter=2,
         )
 
     @task
@@ -27,7 +29,8 @@ class IncidentResponseCrew:
         """
         return Task(
             config=self.tasks_config['generate_response_plan'],
-            agent=self.incident_responder()
+            agent=self.incident_responder(),
+            output_file='src/qml/output/incident_response_plan.md',
         )
 
     @crew
@@ -41,4 +44,3 @@ class IncidentResponseCrew:
             process=Process.sequential,
             verbose=True
         )
-

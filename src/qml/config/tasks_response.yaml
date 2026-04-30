@@ -1,23 +1,42 @@
 generate_response_plan:
   description: >
-    An attack of type '{attack_label}' has been detected.
-    Provide a concise, step-by-step incident response plan.
-    Structure the plan with the sections: "Immediate Actions," "Analysis and Containment," and "Eradication and Recovery."
-    For each attack type, provide the most relevant and effective actions.
+    An attack of type "{attack_label}" has been detected by the classification workflow.
+    Produce a professional incident response playbook in Portuguese for a SOC/operator audience.
+    The output must be actionable, concise, and safe to execute.
+
+    Response principles:
+    - Treat the classification as a decision-support signal, not an absolute fact.
+    - Preserve logs, packet captures, volatile evidence, and timestamps before destructive actions.
+    - Prioritize containment and service continuity.
+    - Prefer reversible actions first when business impact is unclear.
+    - Escalate to a human specialist when evidence is incomplete, confidence is low, or the action may be disruptive.
+    - Do not recommend offensive, retaliatory, or illegal actions.
+
+    Required structure:
+    1. Title: "Plano de Resposta - {attack_label}"
+    2. Executive Summary: 2-3 sentences with likely risk and immediate objective.
+    3. Triage Checklist: concrete checks to confirm scope and confidence.
+    4. Immediate Containment: prioritized actions for the first 15-30 minutes.
+    5. Investigation and Evidence: logs/artifacts to collect and what to look for.
+    6. Eradication and Recovery: steps to remove the cause and safely restore operation.
+    7. Hardening and Prevention: follow-up controls to reduce recurrence.
+    8. Escalation Criteria: when to involve SOC senior, infrastructure owner, legal/compliance, or external provider.
+    9. Success Criteria: how to verify the incident is contained/recovered.
 
     Suggested actions for each attack type:
-    - **Ransomware:** Isolate systems, disconnect from the network, DO NOT pay the ransom, activate the backup plan.
-    - **DDoS (all types):** Contact your Internet Service Provider (ISP) or DDoS mitigation service, apply rate limiting, block malicious IPs.
-    - **SQL Injection:** Isolate the application/database, revoke credentials, analyze logs for data leakage, fix the code with parameterized queries.
-    - **XSS (Cross-Site Scripting):** Remove the malicious script, analyze logs for hijacked sessions, implement a Content Security Policy (CSP).
-    - **MITM (Man-in-the-Middle):** Disconnect the compromised session, investigate the network for unauthorized devices, enforce the use of HTTPS/TLS and VPNs.
-    - **Backdoor:** Isolate the system, perform a full forensic analysis, rebuild the system from a clean image, change all credentials.
-    - **Password Attacks:** Block source IPs, force a password reset for all users, implement MFA and an account lockout policy.
-    - **Reconnaissance (Fingerprinting, Port Scanning, Vulnerability Scanner):** Block source IPs, analyze target ports/services to understand the attacker's intent, close unnecessary ports.
-    - **Uploading (Malicious):** Isolate the server, delete the file, scan the system for other payloads, implement strict upload validation.
+    - Ransomware: isolate affected systems, preserve evidence, identify encryption scope, disable lateral movement, validate backups before restoration, do not recommend paying ransom.
+    - DDoS_HTTP, DDoS_TCP, DDoS_UDP, DDoS_ICMP: activate DDoS mitigation, coordinate with ISP/provider, apply rate limiting and filtering, monitor collateral impact.
+    - SQL_injection: protect application/database, revoke exposed credentials, inspect query logs and data access, patch with parameterized queries, validate WAF rules.
+    - XSS: remove malicious payload, inspect templates/storage, invalidate affected sessions, implement output encoding and CSP.
+    - MITM: terminate suspicious sessions, validate certificates/routes/DNS/ARP, rotate potentially exposed credentials, enforce TLS/VPN.
+    - Backdoor: isolate host, preserve disk/memory evidence, identify persistence, rebuild from trusted image, rotate secrets.
+    - Password: block or throttle source patterns, force resets for affected accounts, review authentication logs, enforce MFA and lockout policies.
+    - Fingerprinting, Port_Scanning, Vulnerability_scanner: rate-limit or block suspicious sources, review exposed services, close unnecessary ports, schedule vulnerability remediation.
+    - Uploading: quarantine uploaded artifact, isolate affected service if execution is suspected, scan for payloads, enforce content validation and storage separation.
+    - Normal or uncertain classification: do not overreact; recommend monitoring, evidence review, and specialist validation.
 
   expected_output: >
-    A clear markdown report detailing the response plan for the specified attack type. The report should be well-structured,
-    easy to follow, and start with a title that identifies the attack.
+    A Markdown incident response playbook in Portuguese using the required structure.
+    Keep it practical and concise. Use checklists and prioritized bullets. Avoid generic filler.
+    Include assumptions when needed and include manual-review recommendations when confidence or context is insufficient.
   agent: incident_responder
-
