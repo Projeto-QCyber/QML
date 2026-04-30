@@ -46,7 +46,6 @@ def _get_env_mode() -> Environment:
         raise ValueError("Ajuste o ambiente para suportar apenas valores: 'TEST', 'DEV' e 'PROD'.")
     return env
 
-
 def _get_first_env(*names: str, default: str | None = None) -> str | None:
     for name in names:
         value = os.getenv(name)
@@ -59,7 +58,6 @@ def _get_int_env(name: str, default: int) -> int:
     value = os.getenv(name)
     if value is None or value.strip() == "":
         return default
-
     try:
         return int(value)
     except ValueError as exc:
@@ -108,13 +106,13 @@ def _env_mode_select_model_llm(env: Environment | None = None) -> LLMEnvironment
         default_model = _get_first_env(
             "LLM_MODEL_DEV_LLM_DEFAULT",
             "LLM_MODEL_DEV_DEFAULT",
-            "LLM_MODEL_DEV1",
+            "LLM_MODEL_DEV3",
             default="ollama/qwen3:3b-q4_K_M",
         )
         leader_model = _get_first_env(
             "LLM_MODEL_DEV_LLM_LEADER",
             "LLM_MODEL_DEV_LEADER",
-            "LLM_MODEL_DEV1",
+            "LLM_MODEL_DEV3",
             default="ollama/qwen3:8b-q4_K_M",
         )
         coder_model = _get_first_env(
@@ -173,14 +171,14 @@ def _llm_default(model_name: str | None = None, max_tokens: int | None = None) -
     selected_model = model_name or config.default_model
     selected_max_tokens = max_tokens or config.default_max_tokens
     base_url = _get_ollama_base_url()
-    _debug_llm_config("default", selected_model, selected_max_tokens, base_url)
+    #_debug_llm_config("default", selected_model, selected_max_tokens, base_url)
 
     return LLM(
         model=selected_model,
         base_url=base_url,
         api_key="ollama",
         temperature=0.1,
-        max_tokens=selected_max_tokens,
+        max_completion_tokens=selected_max_tokens,
     )
 
 
@@ -189,14 +187,14 @@ def _llm_leader(model_name: str | None = None, max_tokens: int | None = None) ->
     selected_model = model_name or config.leader_model
     selected_max_tokens = max_tokens or config.leader_max_tokens
     base_url = _get_ollama_base_url()
-    _debug_llm_config("leader", selected_model, selected_max_tokens, base_url)
+    #_debug_llm_config("leader", selected_model, selected_max_tokens, base_url)
 
     return LLM(
         model=selected_model,
         base_url=base_url,
         api_key="ollama",
         temperature=0.1,
-        max_tokens=selected_max_tokens,
+        max_completion_tokens=selected_max_tokens,
     )
 
 
@@ -205,12 +203,12 @@ def _llm_coder_response(model_name: str | None = None, max_tokens: int | None = 
     selected_model = model_name or os.getenv("QML_CODER_MODEL") or config.coder_model
     selected_max_tokens = max_tokens or config.coder_max_tokens
     base_url = _get_ollama_base_url()
-    _debug_llm_config("coder_response", selected_model, selected_max_tokens, base_url)
+    #_debug_llm_config("coder_response", selected_model, selected_max_tokens, base_url)
 
     return LLM(
         model=selected_model,
         base_url=base_url,
         api_key="ollama",
         temperature=0.2,
-        max_tokens=selected_max_tokens,
+        max_completion_tokens=selected_max_tokens,
     )

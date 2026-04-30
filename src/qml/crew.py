@@ -80,4 +80,5 @@ class CyberPredict:
             tasks=[task1, task2, task3],
             process=Process.sequential,
             verbose=crew_verbose(),
+            max_iter=2,
         )
