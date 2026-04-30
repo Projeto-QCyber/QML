@@ -79,6 +79,10 @@ APP_SECRET_KEY=troque-este-valor
 QCYBER_ENV=DEV
 QCYBER_CREW_VERBOSE=0
 QCYBER_ALLOW_CREW_FALLBACK=1
+QCYBER_USE_BINARY_CREW=1
+QCYBER_USE_MULTICLASS_CREW=1
+QCYBER_USE_INCIDENT_RESPONSE_CREW=1
+QCYBER_USE_REMEDIATION_CREW=1
 QCYBER_BINARY_MIN_CONFIDENCE=0.60
 QCYBER_MULTICLASS_MIN_CONFIDENCE=0.55
 
@@ -102,6 +106,7 @@ Notas:
 - `QCYBER_CREW_VERBOSE=1` mostra logs completos da CrewAI.
 - `QCYBER_CREW_VERBOSE=0` reduz ruido no backend.
 - `QCYBER_ALLOW_CREW_FALLBACK=1` mantem o pipeline rodando com o modelo probabilistico quando algum LLM local falhar.
+- `QCYBER_USE_*_CREW=0` impede que uma Crew especifica seja iniciada.
 - `QCYBER_SHAP_MODE=fast` reduz custo de explicabilidade.
 
 ## Modelos Ollama
@@ -526,6 +531,20 @@ QCYBER_CREW_VERBOSE=0
 ```
 
 Com o fallback ativo, o pipeline continua usando as predicoes e probabilidades do modelo tradicional quando uma Crew falhar. O `workflow_trace` indicara `crew_failed_model_fallback` ou `crew_partial_model_fallback`.
+
+Importante: o fallback so captura a falha depois que a CrewAI imprime o erro interno no terminal. Para nao mostrar esse bloco de falha, desative as Crews que dependem do LLM local:
+
+```bash
+QCYBER_USE_BINARY_CREW=0 \
+QCYBER_USE_MULTICLASS_CREW=0 \
+QCYBER_USE_INCIDENT_RESPONSE_CREW=0 \
+QCYBER_USE_REMEDIATION_CREW=0 \
+crewai run
+```
+
+Nesse modo, o pipeline ainda executa a deteccao binaria, o filtro de amostras suspeitas, a etapa multiclasse e a politica de rejeicao por probabilidades. O que fica desligado e apenas a camada LLM/CrewAI.
+
+Se o terminal nao mostrar uma linha começando com `Workflow config:`, a execucao ainda esta usando uma versao antiga do `src/qml/main.py` ou um ambiente `.venv` desatualizado. Rode novamente `uv sync` e prefira testar com `uv run run_crew` a partir da raiz do projeto.
 
 ### Erro de conexao com Ollama
 

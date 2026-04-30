@@ -11,6 +11,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime, timezone
 from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
+from qml.utils.runtime import env_flag
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 from qml.services.detection import BatchDetectionService, build_detection_report
@@ -294,12 +295,21 @@ def analisar_pacote():
         # O modelo binário avalia a janela inteira; se houver amostras suspeitas,
         # o multiclasse roda somente nelas e consolida um tipo primário.
         samples_for_detection = inputs_for_detection.get("samples", [])
-        print(f"[{req_id}] [BIN] Iniciando fluxo multiagente com {len(samples_for_detection)} amostras...", flush=True)
+        use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=True)
+        use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=True)
+        use_incident_response_crew = env_flag("QCYBER_USE_INCIDENT_RESPONSE_CREW", default=True)
+        use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=True)
+        print(
+            f"[{req_id}] [BIN] Iniciando fluxo com {len(samples_for_detection)} amostras | "
+            f"binary_crew={use_binary_crew} multiclass_crew={use_multiclass_crew} "
+            f"incident_response_crew={use_incident_response_crew} remediation_crew={use_remediation_crew}",
+            flush=True,
+        )
         detection_result = BatchDetectionService(
-            use_binary_crew=True,
-            use_multiclass_crew=True,
-            use_incident_response_crew=True,
-            use_remediation_crew=True,
+            use_binary_crew=use_binary_crew,
+            use_multiclass_crew=use_multiclass_crew,
+            use_incident_response_crew=use_incident_response_crew,
+            use_remediation_crew=use_remediation_crew,
         ).predict(samples_for_detection)
         bin_preds = detection_result.binary_predictions
         raw_text_bin = json.dumps(detection_result.to_dict(), ensure_ascii=False)

@@ -9,6 +9,7 @@ os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 from qml.services.detection import BatchDetectionService, build_detection_report
+from qml.utils.runtime import env_flag
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -51,16 +52,27 @@ def run() -> None:
     os.environ.setdefault("QCYBER_CREW_VERBOSE", "1")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     samples, labels = _load_default_samples()
+    use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=True)
+    use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=True)
+    use_incident_response_crew = env_flag("QCYBER_USE_INCIDENT_RESPONSE_CREW", default=True)
+    use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=True)
 
     if labels:
         print(f"Loaded sample labels: {labels}")
     print(f"Running optimized two-stage CrewAI detection with {len(samples)} samples...")
+    print(
+        "Workflow config: "
+        f"binary_crew={use_binary_crew}, "
+        f"multiclass_crew={use_multiclass_crew}, "
+        f"incident_response_crew={use_incident_response_crew}, "
+        f"remediation_crew={use_remediation_crew}"
+    )
 
     result = BatchDetectionService(
-        use_binary_crew=True,
-        use_multiclass_crew=True,
-        use_incident_response_crew=True,
-        use_remediation_crew=True,
+        use_binary_crew=use_binary_crew,
+        use_multiclass_crew=use_multiclass_crew,
+        use_incident_response_crew=use_incident_response_crew,
+        use_remediation_crew=use_remediation_crew,
     ).predict(samples)
     payload = result.to_dict()
     payload["report"] = build_detection_report(result)

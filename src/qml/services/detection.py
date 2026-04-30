@@ -182,6 +182,11 @@ class BatchDetectionService:
         if self.use_binary_crew:
             try:
                 predictions = self._predict_binary_with_crew(samples, probabilities)
+                _ensure_prediction_count(
+                    predictions,
+                    expected_count=len(samples),
+                    source="Crew binária",
+                )
                 self._last_binary_workflow_status = "crew"
                 return predictions
             except Exception as exc:
@@ -193,9 +198,21 @@ class BatchDetectionService:
                     f"probabilístico. Motivo: {_brief_exception(exc)}",
                     flush=True,
                 )
-                return self.binary_model.predict(samples)
+                fallback_predictions = self.binary_model.predict(samples)
+                _ensure_prediction_count(
+                    fallback_predictions,
+                    expected_count=len(samples),
+                    source="modelo binário direto",
+                )
+                return fallback_predictions
         self._last_binary_workflow_status = "direct_model"
-        return self.binary_model.predict(samples)
+        predictions = self.binary_model.predict(samples)
+        _ensure_prediction_count(
+            predictions,
+            expected_count=len(samples),
+            source="modelo binário direto",
+        )
+        return predictions
 
     def _predict_binary_with_crew(
         self,
@@ -743,6 +760,19 @@ def _multiclass_trace_status(
     if failures >= sample_count:
         return "crew_failed_model_fallback"
     return "crew_partial_model_fallback"
+
+
+def _ensure_prediction_count(
+    predictions: list[int],
+    expected_count: int,
+    source: str,
+) -> None:
+    if len(predictions) == expected_count:
+        return
+    raise RuntimeError(
+        f"{source} retornou {len(predictions)} predição(ões), "
+        f"mas eram esperadas {expected_count}."
+    )
 
 
 def _brief_exception(exc: Exception) -> str:
