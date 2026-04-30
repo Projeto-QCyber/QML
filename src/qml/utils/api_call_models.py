@@ -1,12 +1,27 @@
-from crewai import LLM
 import os
-# -----------------------------------------------------------------------------
-# Helper factories to avoid duplication
-# -----------------------------------------------------------------------------
+from typing import Any, Dict, Optional
 
-_OPENAI_MODEL: str = "gpt-5-mini"
-_OPENAI_API_KEY: str = "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"
-_OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+from crewai import LLM
+
+
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_OPENAI_MODEL = "gpt-5-nano"
+DEFAULT_OLLAMA_MODEL = "ollama/llama3.1"
+
+
+class OpenAICompletionTokensLLM(LLM):
+    """CrewAI LLM variant that sends OpenAI's GPT-5 token limit parameter."""
+
+    def __init__(self, *args, max_completion_tokens: Optional[int] = None, **kwargs):
+        self._openai_max_completion_tokens = max_completion_tokens
+        super().__init__(*args, **kwargs)
+
+    def _prepare_completion_params(self, *args, **kwargs) -> Dict[str, Any]:
+        params = super()._prepare_completion_params(*args, **kwargs)
+        params.pop("max_tokens", None)
+        if self._openai_max_completion_tokens is not None:
+            params["max_completion_tokens"] = self._openai_max_completion_tokens
+        return params
 
 
 def _get_ollama_base_url() -> str:
@@ -15,51 +30,68 @@ def _get_ollama_base_url() -> str:
     - Inside Docker containers: use service name 'ollama'
     - Outside Docker containers: use 'localhost'
     """
-    # Check if we're running inside Docker by looking for common indicators
     if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER'):
         return "http://ollama:11434"
-    else:
-        return "http://localhost:11434"
+    return "http://localhost:11434"
+
+
+def _llm_ollama(max_tokens: int) -> LLM:
+    return LLM(
+        model=os.getenv("QML_OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
+        base_url=os.getenv("OLLAMA_BASE_URL", _get_ollama_base_url()),
+        api_key="ollama",
+        temperature=float(os.getenv("QML_LLM_TEMPERATURE", "0.2")),
+        max_tokens=max_tokens,
+    )
+
+
+def _openai_api_key() -> str:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. Set it in your environment or .env "
+            "before using QML_LLM_PROVIDER=openai."
+        )
+    return api_key
+
+
+def _llm_openai(max_tokens: int) -> LLM:
+    kwargs = {
+        "model": os.getenv("QML_OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+        "base_url": os.getenv("OPENAI_BASE_URL", OPENAI_BASE_URL),
+        "api_key": _openai_api_key(),
+        "max_completion_tokens": max_tokens,
+    }
+    if os.getenv("QML_LLM_TEMPERATURE"):
+        kwargs["temperature"] = float(os.getenv("QML_LLM_TEMPERATURE", "1"))
+
+    return OpenAICompletionTokensLLM(
+        **kwargs,
+    )
+
+
+def _llm_by_provider(max_tokens: int) -> LLM:
+    provider = os.getenv("QML_LLM_PROVIDER", "ollama").strip().lower()
+    if provider == "openai":
+        return _llm_openai(max_tokens=max_tokens)
+    if provider == "ollama":
+        return _llm_ollama(max_tokens=max_tokens)
+    raise ValueError("QML_LLM_PROVIDER must be either 'ollama' or 'openai'.")
 
 
 def _llm_default() -> LLM:
-    return LLM(
-        model="ollama/qwen2.5:7b-instruct-q4_K_M",
-        base_url=_get_ollama_base_url(),
-        api_key="ollama",
-        temperature=0.2,
-        max_tokens=1024,
-    )
+    return _llm_by_provider(max_tokens=1024)
+
 
 def _llm_leader() -> LLM:
-    return LLM(
-        model="ollama/qwen2.5:7b-instruct-q4_K_M",
-        base_url=_get_ollama_base_url(),
-        api_key="ollama",
-        temperature=0.2,
-        max_tokens=2048,
-    )
-'''
+    return _llm_by_provider(max_tokens=2048)
 
-from crewai import LLM
-import os
 
-# -----------------------------------------------------------------------------
-# OpenAI-based factories
-# -----------------------------------------------------------------------------
+def _llm_openai_default() -> LLM:
+    """Explicit OpenAI factory for quick latency tests without changing callers."""
+    return _llm_openai(max_tokens=1024)
 
-def _llm_default() -> LLM:
-    return LLM(
-        model="gpt-5-nano",
-        base_url="https://api.openai.com/v1",
-        api_key=_OPENAI_API_KEY,
-    )
 
-def _llm_leader() -> LLM:
-    return LLM(
-        model="gpt-5-nano",
-        base_url="https://api.openai.com/v1",
-        api_key=_OPENAI_API_KEY,
-    )
-
-'''
+def _llm_openai_leader() -> LLM:
+    """Explicit OpenAI factory for quick latency tests without changing callers."""
+    return _llm_openai(max_tokens=2048)

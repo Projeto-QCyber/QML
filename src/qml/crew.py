@@ -1,9 +1,10 @@
+import os
 from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
-from qml.schemas.agents_roles import Specialist
 from qml.tools.model import RFModel
+from qml.schemas.agents_roles import Specialist
 from qml.tools.quantum_model import QuantumModel
 from qml.utils.api_call_models import _llm_default, _llm_leader
 
@@ -18,11 +19,40 @@ class CyberPredict:
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
+    def _binary_tool_provider(self) -> str:
+        provider = os.getenv("QML_BINARY_TOOL_PROVIDER", "both").strip().lower()
+        print(f"provider: {provider}")
+        if provider not in {"both", "rf", "quantum"}:
+            raise ValueError("QML_BINARY_TOOL_PROVIDER must be 'both', 'rf', or 'quantum'.")
+        return provider
+
+    def _binary_tools(self):
+        provider = self._binary_tool_provider()
+        if provider == "quantum":
+            return [QuantumModel()]
+        if provider == "rf":
+            return [RFModel()]
+        return [RFModel(), QuantumModel()]
+
+    def _apply_binary_tool_instruction(self, task_obj: Task) -> Task:
+        provider = self._binary_tool_provider()
+        if provider == "quantum":
+            task_obj.description += (
+                "\n\nTEST MODE: Use ONLY the `quantum_model` tool for this task. "
+                "Do not call the `Model` tool."
+            )
+        elif provider == "rf":
+            task_obj.description += (
+                "\n\nTEST MODE: Use ONLY the `Model` tool for this task. "
+                "Do not call the `quantum_model` tool."
+            )
+        return task_obj
+
     @agent
     def cybersecurity_analyst_1(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_1'],
-            tools=[RFModel(), QuantumModel()],
+            tools=self._binary_tools(),
             llm=_llm_default(),
             verbose=True
         )
@@ -31,7 +61,7 @@ class CyberPredict:
     def cybersecurity_analyst_2(self) -> Agent:
         return Agent(
             config=self.agents_config['cybersecurity_analyst_2'],
-            tools=[RFModel(), QuantumModel()],
+            tools=self._binary_tools(),
             llm=_llm_default(),
             verbose=True,
         )
@@ -46,17 +76,17 @@ class CyberPredict:
 
     @task
     def analyze_and_vote_1(self) -> Task:
-        return Task(
+        return self._apply_binary_tool_instruction(Task(
             config=self.tasks_config['analyze_and_vote_1'],
             agent=self.cybersecurity_analyst_1()
-        )
+        ))
 
     @task
     def analyze_and_vote_2(self) -> Task:
-        return Task(
+        return self._apply_binary_tool_instruction(Task(
             config=self.tasks_config['analyze_and_vote_2'],
             agent=self.cybersecurity_analyst_2()
-        )
+        ))
 
     @task
     def validate_results(self) -> Task:

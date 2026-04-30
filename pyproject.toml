@@ -32,6 +32,8 @@ dependencies = [
 
 [project.scripts]
 run_crew = "qml.main:run"
+run_quantum_crew = "qml.main:run_quantum"
+run_rf_crew = "qml.main:run_rf"
 
 [build-system]
 requires = ["hatchling"]
