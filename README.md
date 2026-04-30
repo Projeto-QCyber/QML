@@ -85,6 +85,8 @@ QCYBER_USE_INCIDENT_RESPONSE_CREW=1
 QCYBER_USE_REMEDIATION_CREW=1
 QCYBER_BINARY_MIN_CONFIDENCE=0.60
 QCYBER_MULTICLASS_MIN_CONFIDENCE=0.55
+QCYBER_MULTICLASS_ACCEPT_CONFIDENCE=0.80
+QCYBER_MULTICLASS_TOP_K=3
 
 LLM_MODEL_DEV_LLM_DEFAULT=ollama/qwen3:3b-q4_K_M
 LLM_MODEL_DEV_LLM_LEADER=ollama/qwen3:8b-q4_K_M
@@ -108,6 +110,8 @@ Notas:
 - `QCYBER_ALLOW_CREW_FALLBACK=1` mantem o pipeline rodando com o modelo probabilistico quando algum LLM local falhar.
 - `QCYBER_USE_*_CREW=0` impede que uma Crew especifica seja iniciada.
 - Em `QCYBER_ENV=TEST`, as Crews ficam desligadas por padrao, a menos que voce defina `QCYBER_USE_*_CREW=1`.
+- `QCYBER_MULTICLASS_ACCEPT_CONFIDENCE` aceita diretamente a classe do RF quando a confiança multiclasse e alta.
+- `QCYBER_MULTICLASS_TOP_K` limita quantos especialistas candidatos podem ser chamados quando a amostra esta ambigua.
 - `QCYBER_SHAP_MODE=fast` reduz custo de explicabilidade.
 
 ## Modelos Ollama
@@ -421,9 +425,11 @@ src/qml/output/
 
 Arquivos comuns:
 
+- `detection_result.json`
+- `preliminary_prediction.json`
+- `final_prediction.json`
 - `incident_response_plan.md`
 - `remediation_chat.json`
-- arquivos de predicao preliminar/final, dependendo da Crew executada.
 
 Esses arquivos sao auxiliares. A fonte principal do resultado operacional deve ser o JSON retornado pelo terminal ou pela API.
 
@@ -460,6 +466,12 @@ O fluxo completo pode ser lento em maquina limitada porque envolve:
 - SHAP/explicabilidade.
 - Crew de resposta a incidente.
 - Crew de remediacao com modelo coder.
+
+Na etapa multiclasse, o fluxo otimizado usa o RF em batch e so chama especialistas LLM quando a confiança fica ambigua:
+
+- `confidence >= QCYBER_MULTICLASS_ACCEPT_CONFIDENCE`: aceita a classe do RF sem Crew multiclasse.
+- `confidence < QCYBER_MULTICLASS_MIN_CONFIDENCE`: encaminha para revisao, sem Crew multiclasse.
+- faixa intermediaria: chama apenas os `QCYBER_MULTICLASS_TOP_K` especialistas candidatos.
 
 Para acelerar testes:
 

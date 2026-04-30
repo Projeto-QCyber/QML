@@ -140,8 +140,9 @@ analyze_and_vote_xss:
 
 final_evaluation_task:
   description: >
-    You have been provided with the outputs of all 14 specialists for the same 1 samples.
-    Each specialist returns a JSON object with:
+    You have been provided with the outputs of the selected top-k specialists for the same 1 sample.
+    The selected specialists correspond to the highest-probability candidate classes from the
+    probability model. Each specialist returns a JSON object with:
     - "votes": binary array (1 if the model's predicted_label equals the specialist's class, else 0)
     - "predicted_labels": the raw multiclass labels (0–13) for each sample
     - "notes": short per-sample observations (optional but recommended), grounded in raw fields
@@ -164,12 +165,14 @@ final_evaluation_task:
     You MUST use the probability context when deciding whether to accept the
     multiclass label or reject the classification for specialist review.
     If the multiclass confidence is below "min_confidence", return prediction 99.
+    If the multiclass confidence is above "accept_without_llm_confidence", prefer accepting
+    the probability model prediction unless the selected specialists provide clear contradictory evidence.
     If specialist votes disagree with the probability model, return prediction 99
     unless there is a clear, evidence-based reason in the notes to override it.
     Explain the probability/confidence rationale in the report.
 
     For each sample:
-    (1) Inspect which specialists voted 1 and read their notes;
+    (1) Inspect which selected top-k specialists voted 1 and read their notes;
     (2) Compare the votes with the probability context;
     (3) If confidence is below threshold or evidence conflicts, return 99;
     (4) If exactly one specialist voted 1 and probability context supports it, select that class;

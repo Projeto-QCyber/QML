@@ -39,6 +39,7 @@ class ClassifiedSample:
     model_attack_type_id: int | None = None
     workflow_attack_type_id: int | None = None
     probabilities: list[float] | None = None
+    top_classes: list[dict[str, Any]] = field(default_factory=list)
     confidence: float | None = None
     decision_status: str = "accepted"
     rejection_reason: str = ""
@@ -120,6 +121,7 @@ class BatchDetectionResult:
                     "model_attack_type_id": item.model_attack_type_id,
                     "workflow_attack_type_id": item.workflow_attack_type_id,
                     "probabilities": item.probabilities,
+                    "top_classes": item.top_classes,
                     "confidence": item.confidence,
                     "decision_status": item.decision_status,
                     "rejection_reason": item.rejection_reason,
@@ -163,10 +165,16 @@ class BatchDetectionService:
             if multiclass_min_confidence is not None
             else _read_float_env("QCYBER_MULTICLASS_MIN_CONFIDENCE", 0.55)
         )
+        self.multiclass_accept_confidence = max(
+            self.multiclass_min_confidence,
+            _read_float_env("QCYBER_MULTICLASS_ACCEPT_CONFIDENCE", 0.80),
+        )
+        self.multiclass_top_k = max(1, _read_int_env("QCYBER_MULTICLASS_TOP_K", 3))
         self.binary_model = RFModel(classification="binary")
         self._multiclass_model: RFModel | None = None
         self._last_binary_workflow_status = "not_started"
         self._multiclass_workflow_failures = 0
+        self._multiclass_workflow_calls = 0
 
     @property
     def multiclass_model(self) -> RFModel:
@@ -280,10 +288,11 @@ class BatchDetectionService:
         self,
         sample: dict[str, Any],
         probability_context: dict[str, Any],
+        candidate_class_ids: list[int],
     ) -> tuple[int | None, str | None]:
         from qml.crew_multiclass import CyberPredictMult
 
-        result = CyberPredictMult().crew().kickoff(
+        result = CyberPredictMult().crew_for_class_ids(candidate_class_ids).kickoff(
             inputs={
                 "samples": [sample],
                 "shap_explanation": "",
@@ -368,6 +377,7 @@ class BatchDetectionService:
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
         self._last_binary_workflow_status = "not_started"
         self._multiclass_workflow_failures = 0
+        self._multiclass_workflow_calls = 0
         workflow_trace: list[dict[str, Any]] = [
             {
                 "stage": "input",
@@ -436,6 +446,8 @@ class BatchDetectionService:
             binary_decision = binary_decisions[batch_index]
             sample_probabilities = probabilities[local_idx] if probabilities else None
             confidence = _max_probability(sample_probabilities)
+            top_classes = _top_label_probabilities(sample_probabilities, self.multiclass_top_k)
+            candidate_class_ids = [int(item["class_id"]) for item in top_classes]
             workflow_attack_type_id = None
             workflow_report = None
             probability_context = _build_probability_context(
@@ -443,14 +455,24 @@ class BatchDetectionService:
                 binary_decision=binary_decision,
                 multiclass_prediction=int(attack_type_id),
                 multiclass_probabilities=sample_probabilities,
+                top_classes=top_classes,
                 binary_min_confidence=self.binary_min_confidence,
                 multiclass_min_confidence=self.multiclass_min_confidence,
+                multiclass_accept_confidence=self.multiclass_accept_confidence,
             )
-            if self.use_multiclass_crew:
+
+            should_call_multiclass_crew = (
+                self.use_multiclass_crew
+                and confidence is not None
+                and self.multiclass_min_confidence <= confidence < self.multiclass_accept_confidence
+            )
+            if should_call_multiclass_crew:
+                self._multiclass_workflow_calls += 1
                 try:
                     workflow_attack_type_id, workflow_report = self._run_multiclass_workflow(
                         suspicious_samples[local_idx],
                         probability_context,
+                        candidate_class_ids=candidate_class_ids,
                     )
                 except Exception as exc:
                     if not _read_bool_env("QCYBER_ALLOW_CREW_FALLBACK", True):
@@ -495,6 +517,7 @@ class BatchDetectionService:
                     model_attack_type_id=int(attack_type_id),
                     workflow_attack_type_id=workflow_attack_type_id,
                     probabilities=sample_probabilities,
+                    top_classes=top_classes,
                     confidence=confidence,
                     decision_status=decision_status,
                     rejection_reason=rejection_reason,
@@ -507,9 +530,14 @@ class BatchDetectionService:
                 "status": _multiclass_trace_status(
                     self.use_multiclass_crew,
                     self._multiclass_workflow_failures,
+                    self._multiclass_workflow_calls,
                     len(suspicious_samples),
                 ),
                 "sample_count": len(suspicious_samples),
+                "llm_review_count": self._multiclass_workflow_calls,
+                "top_k": self.multiclass_top_k,
+                "min_confidence": self.multiclass_min_confidence,
+                "accept_confidence": self.multiclass_accept_confidence,
                 "accepted_count": len([
                     item for item in classified_attacks if item.decision_status == "accepted"
                 ]),
@@ -687,8 +715,10 @@ def _build_probability_context(
     binary_decision: BinarySampleDecision,
     multiclass_prediction: int,
     multiclass_probabilities: list[float] | None,
+    top_classes: list[dict[str, Any]],
     binary_min_confidence: float,
     multiclass_min_confidence: float,
+    multiclass_accept_confidence: float,
 ) -> dict[str, Any]:
     return {
         "batch_index": batch_index,
@@ -707,12 +737,15 @@ def _build_probability_context(
             ),
             "probabilities": _label_probabilities(multiclass_probabilities),
             "raw_probabilities": multiclass_probabilities,
+            "top_classes": top_classes,
             "confidence": _max_probability(multiclass_probabilities),
             "min_confidence": multiclass_min_confidence,
+            "accept_without_llm_confidence": multiclass_accept_confidence,
         },
         "rejection_policy": {
             "return_99_when_multiclass_confidence_below_threshold": True,
             "send_to_specialist_when_workflow_disagrees_with_probability_model": True,
+            "call_only_top_k_specialists_when_confidence_is_ambiguous": True,
         },
     }
 
@@ -767,16 +800,42 @@ def _label_probabilities(probabilities: list[float] | None) -> list[dict[str, An
     ]
 
 
+def _top_label_probabilities(
+    probabilities: list[float] | None,
+    top_k: int,
+) -> list[dict[str, Any]]:
+    if not probabilities:
+        return []
+
+    ranked_indices = sorted(
+        range(len(probabilities)),
+        key=lambda idx: float(probabilities[idx]),
+        reverse=True,
+    )[:top_k]
+    return [
+        {
+            "rank": rank + 1,
+            "class_id": idx,
+            "label": ATTACK_LABELS.get(idx, f"Classe_{idx}"),
+            "probability": float(probabilities[idx]),
+        }
+        for rank, idx in enumerate(ranked_indices)
+    ]
+
+
 def _multiclass_trace_status(
     use_multiclass_crew: bool,
     failures: int,
+    calls: int,
     sample_count: int,
 ) -> str:
     if not use_multiclass_crew:
         return "direct_model"
+    if calls == 0:
+        return "probability_gated_no_llm"
     if failures == 0:
-        return "crew"
-    if failures >= sample_count:
+        return "top_k_crew"
+    if failures >= calls:
         return "crew_failed_model_fallback"
     return "crew_partial_model_fallback"
 
@@ -816,3 +875,13 @@ def _read_float_env(name: str, default: float) -> float:
         return float(raw_value)
     except ValueError:
         raise ValueError(f"{name} must be a float, got {raw_value!r}.") from None
+
+
+def _read_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None or raw_value.strip() == "":
+        return default
+    try:
+        return int(raw_value)
+    except ValueError:
+        raise ValueError(f"{name} must be an integer, got {raw_value!r}.") from None

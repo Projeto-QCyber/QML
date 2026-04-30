@@ -48,6 +48,14 @@ def _load_default_samples(count: int = 5) -> tuple[list[dict[str, Any]], list[An
     return features.to_dict(orient="records"), labels
 
 
+def _save_detection_payload(payload: dict[str, Any]) -> Path:
+    output_path = OUTPUT_DIR / "detection_result.json"
+    with output_path.open("w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+    return output_path
+
+
 def run() -> None:
     os.environ.setdefault("QCYBER_CREW_VERBOSE", "1")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -80,6 +88,8 @@ def run() -> None:
     ).predict(samples)
     payload = result.to_dict()
     payload["report"] = build_detection_report(result)
+    output_path = _save_detection_payload(payload)
+    print(f"Saved detection output to: {output_path}")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
