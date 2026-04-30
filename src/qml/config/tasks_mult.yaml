@@ -156,14 +156,28 @@ final_evaluation_task:
     {shap_explanation}
     ---
 
+    PROBABILITY CONTEXT:
+    ---
+    {probability_context}
+    ---
+
+    You MUST use the probability context when deciding whether to accept the
+    multiclass label or reject the classification for specialist review.
+    If the multiclass confidence is below "min_confidence", return prediction 99.
+    If specialist votes disagree with the probability model, return prediction 99
+    unless there is a clear, evidence-based reason in the notes to override it.
+    Explain the probability/confidence rationale in the report.
+
     For each sample:
     (1) Inspect which specialists voted 1 and read their notes;
-    (2) If exactly one specialist voted 1, select that class;
-    (3) If none voted 1, label the sample as "normal".
+    (2) Compare the votes with the probability context;
+    (3) If confidence is below threshold or evidence conflicts, return 99;
+    (4) If exactly one specialist voted 1 and probability context supports it, select that class;
+    (5) If none voted 1, return 99 instead of forcing a class.
     Write a concise rationale explaining any non-trivial tie-breaks.
   expected_output: >
     JSON with:
-    - "predictions": array of 1 final labels (one of: [Backdoor, DDoS_HTTP, DDoS_ICMP, DDoS_TCP, DDoS_UDP, Fingerprinting, MITM, Password, Port_Scanning, Ransomware, SQL_injection, Uploading, Vulnerability_scanner, XSS])
-    - "report": 3–6 sentences summarizing the audit process and citing 1–2 examples
-      where tie-breaks or overrides happened due to notes aligned with raw features.
+    - "predictions": array of 1 final integer labels. Use 99 for rejection/specialist review.
+    - "report": 3–6 sentences summarizing the audit process, probability/confidence, and
+      whether the result was accepted or rejected for specialist review.
   agent: cybersecurity_team_leader

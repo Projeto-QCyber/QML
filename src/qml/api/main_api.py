@@ -13,7 +13,6 @@ from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
-from qml.crew_response import IncidentResponseCrew
 from qml.services.detection import BatchDetectionService, build_detection_report
 from qml.services.remediation import run_remediation_chat
 from qml.tools.shap_explain import ExplainTop2SHAP
@@ -295,8 +294,13 @@ def analisar_pacote():
         # O modelo binário avalia a janela inteira; se houver amostras suspeitas,
         # o multiclasse roda somente nelas e consolida um tipo primário.
         samples_for_detection = inputs_for_detection.get("samples", [])
-        print(f"[{req_id}] [BIN] Iniciando predição direta com {len(samples_for_detection)} amostras...", flush=True)
-        detection_result = BatchDetectionService().predict(samples_for_detection)
+        print(f"[{req_id}] [BIN] Iniciando fluxo multiagente com {len(samples_for_detection)} amostras...", flush=True)
+        detection_result = BatchDetectionService(
+            use_binary_crew=True,
+            use_multiclass_crew=True,
+            use_incident_response_crew=True,
+            use_remediation_crew=True,
+        ).predict(samples_for_detection)
         bin_preds = detection_result.binary_predictions
         raw_text_bin = json.dumps(detection_result.to_dict(), ensure_ascii=False)
         bin_output = {
@@ -323,7 +327,7 @@ def analisar_pacote():
         else:
             suspicious_samples = [samples_for_detection[idx] for idx in detection_result.attack_indices]
             print(
-                f"[{req_id}] [MULT] Classificação direta concluída para "
+                f"[{req_id}] [MULT] Workflow multiclasse concluído para "
                 f"{len(suspicious_samples)} amostra(s) suspeita(s): "
                 f"{[item.attack_type_label for item in detection_result.classified_attacks]}",
                 flush=True,
@@ -372,18 +376,9 @@ def analisar_pacote():
                 explanation_text = str(explanation_text)
             print(f"[{req_id}] [MULT] Tamanho do relatório do líder: {len(explanation_text)}", flush=True)
 
-            # Plano de resposta ao incidente (markdown) somente se não for 'Normal'
-            incident_plan = ""
-            if str(tipo_ataque_label).lower() != "normal":
-                try:
-                    print(f"[{req_id}] [IR] Iniciando geração do plano de resposta para '{tipo_ataque_label}'", flush=True)
-                    # tasks_response.yaml espera a chave 'attack_label' e valor string
-                    ir_result = IncidentResponseCrew().crew().kickoff(inputs={"attack_label": tipo_ataque_label})
-                    incident_plan = getattr(ir_result, "raw", str(ir_result))
-                    print(f"[{req_id}] [IR] Plano de resposta gerado (até 800 chars):\n{incident_plan[:800]}", flush=True)
-                except Exception:
-                    print(f"[{req_id}] ⚠️ Falha ao gerar plano de resposta. Prosseguindo sem ações.\n{traceback.format_exc()}", flush=True)
-                    incident_plan = ""
+            incident_plan = detection_result.incident_response_plan or ""
+            if incident_plan:
+                print(f"[{req_id}] [IR] Plano de resposta gerado (até 800 chars):\n{incident_plan[:800]}", flush=True)
 
         print(f"[{req_id}] ✅ Análise concluída. Ataque tipo: {tipo_ataque_label} para o dispositivo: {device_id}", flush=True)
 

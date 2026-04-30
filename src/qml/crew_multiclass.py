@@ -9,6 +9,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from qml.schemas.agents_roles import Specialist, LeaderDecision  # specialist votes and leader decision
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
 from qml.utils.api_call_models import _llm_default, _llm_leader
+from qml.utils.runtime import crew_verbose
 
 import shap
 import time
@@ -86,7 +87,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_mitm'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -96,7 +97,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_fingerprinting'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -106,7 +107,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ransomware'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -116,7 +117,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_uploading'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -126,7 +127,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_sql_injection'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -136,7 +137,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_http'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -146,7 +147,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_tcp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -156,7 +157,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_password'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -166,7 +167,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_port_scanning'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -176,7 +177,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_vulnerability_scanner'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -186,7 +187,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_backdoor'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -196,7 +197,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_xss'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -206,7 +207,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_udp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -216,7 +217,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_icmp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -228,7 +229,7 @@ class CyberPredictMult:
         return Agent(
             config=self.agents_config['cybersecurity_team_leader'],
             llm=_llm_leader(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=True,
             max_iter=1             
         )
@@ -407,5 +408,5 @@ class CyberPredictMult:
             tasks=self.tasks,
             process=Process.hierarchical,             # leader-managed deliberation
             manager_agent=self.cybersecurity_team_leader(),  # explicit manager
-            verbose=True
+            verbose=crew_verbose()
         )

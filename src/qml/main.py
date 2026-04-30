@@ -1,4 +1,5 @@
 import json
+import os
 import pandas as pd
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,7 @@ def _load_default_samples(count: int = 5) -> tuple[list[dict[str, Any]], list[An
 
 
 def run() -> None:
+    os.environ.setdefault("QCYBER_CREW_VERBOSE", "1")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     samples, labels = _load_default_samples()
 

@@ -34,11 +34,14 @@ class ClassifiedSample:
     batch_index: int
     attack_type_id: int
     attack_type_label: str
+    binary_probabilities: list[float] | None = None
+    binary_confidence: float | None = None
     model_attack_type_id: int | None = None
     workflow_attack_type_id: int | None = None
     probabilities: list[float] | None = None
     confidence: float | None = None
     decision_status: str = "accepted"
+    rejection_reason: str = ""
     report: str | None = None
 
 
@@ -63,6 +66,7 @@ class BatchDetectionResult:
     incident_response_status: str = "not_applicable"
     remediation_suggestion: dict[str, Any] = field(default_factory=dict)
     remediation_suggestion_status: str = "not_applicable"
+    workflow_trace: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def window_has_attack(self) -> bool:
@@ -111,11 +115,14 @@ class BatchDetectionResult:
                     "batch_index": item.batch_index,
                     "attack_type_id": item.attack_type_id,
                     "attack_type_label": item.attack_type_label,
+                    "binary_probabilities": item.binary_probabilities,
+                    "binary_confidence": item.binary_confidence,
                     "model_attack_type_id": item.model_attack_type_id,
                     "workflow_attack_type_id": item.workflow_attack_type_id,
                     "probabilities": item.probabilities,
                     "confidence": item.confidence,
                     "decision_status": item.decision_status,
+                    "rejection_reason": item.rejection_reason,
                     "report": item.report,
                 }
                 for item in self.classified_attacks
@@ -126,6 +133,7 @@ class BatchDetectionResult:
             "incident_response_plan": self.incident_response_plan,
             "remediation_suggestion_status": self.remediation_suggestion_status,
             "remediation_suggestion": self.remediation_suggestion,
+            "workflow_trace": self.workflow_trace,
         }
 
 
@@ -164,15 +172,32 @@ class BatchDetectionService:
             self._multiclass_model = RFModel(classification="multiclass")
         return self._multiclass_model
 
-    def _predict_binary(self, samples: list[dict[str, Any]]) -> list[int]:
+    def _predict_binary(
+        self,
+        samples: list[dict[str, Any]],
+        probabilities: list[list[float]] | None,
+    ) -> list[int]:
         if self.use_binary_crew:
-            return self._predict_binary_with_crew(samples)
+            return self._predict_binary_with_crew(samples, probabilities)
         return self.binary_model.predict(samples)
 
-    def _predict_binary_with_crew(self, samples: list[dict[str, Any]]) -> list[int]:
+    def _predict_binary_with_crew(
+        self,
+        samples: list[dict[str, Any]],
+        probabilities: list[list[float]] | None,
+    ) -> list[int]:
         from qml.crew import CyberPredict
 
-        result = CyberPredict().crew().kickoff(inputs={"samples": samples})
+        probability_context = _build_binary_probability_context(
+            probabilities=probabilities,
+            min_confidence=self.binary_min_confidence,
+        )
+        result = CyberPredict().crew().kickoff(
+            inputs={
+                "samples": samples,
+                "binary_probability_context": json.dumps(probability_context, ensure_ascii=False),
+            }
+        )
         raw_output = getattr(result, "raw", str(result))
         predictions = _extract_binary_predictions(raw_output)
         if not predictions:
@@ -215,11 +240,19 @@ class BatchDetectionService:
             )
         return decisions
 
-    def _run_multiclass_workflow(self, sample: dict[str, Any]) -> tuple[int | None, str | None]:
+    def _run_multiclass_workflow(
+        self,
+        sample: dict[str, Any],
+        probability_context: dict[str, Any],
+    ) -> tuple[int | None, str | None]:
         from qml.crew_multiclass import CyberPredictMult
 
         result = CyberPredictMult().crew().kickoff(
-            inputs={"samples": [sample], "shap_explanation": ""}
+            inputs={
+                "samples": [sample],
+                "shap_explanation": "",
+                "probability_context": json.dumps(probability_context, ensure_ascii=False),
+            }
         )
         raw_output = getattr(result, "raw", str(result))
         predictions = _extract_binary_predictions(raw_output)
@@ -277,13 +310,20 @@ class BatchDetectionService:
         return suggestion, "generated"
 
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
-        binary_predictions = self._predict_binary(samples)
+        workflow_trace: list[dict[str, Any]] = [
+            {
+                "stage": "input",
+                "status": "received",
+                "sample_count": len(samples),
+            }
+        ]
+        binary_probabilities = self.binary_model.predict_proba(samples)
+        binary_predictions = self._predict_binary(samples, binary_probabilities)
         if len(binary_predictions) != len(samples):
             raise RuntimeError(
                 "O modelo binário retornou uma quantidade de predições diferente "
                 "da quantidade de amostras recebidas."
             )
-        binary_probabilities = self.binary_model.predict_proba(samples)
         binary_decisions = self._build_binary_decisions(binary_predictions, binary_probabilities)
         attack_indices = [
             item.batch_index
@@ -295,6 +335,15 @@ class BatchDetectionService:
             for item in binary_decisions
             if item.decision_status == "needs_specialist_review"
         ]
+        workflow_trace.append(
+            {
+                "stage": "binary",
+                "status": "crew" if self.use_binary_crew else "direct_model",
+                "sample_count": len(samples),
+                "accepted_attack_count": len(attack_indices),
+                "review_count": len(review_indices),
+            }
+        )
 
         if not attack_indices:
             return BatchDetectionResult(
@@ -303,9 +352,18 @@ class BatchDetectionService:
                 binary_decisions=binary_decisions,
                 review_indices=review_indices,
                 incident_response_status="not_applicable",
+                workflow_trace=workflow_trace,
             )
 
         suspicious_samples = [samples[idx] for idx in attack_indices]
+        workflow_trace.append(
+            {
+                "stage": "multiclass_input",
+                "status": "filtered_from_binary_attacks",
+                "source_indices": attack_indices,
+                "sample_count": len(suspicious_samples),
+            }
+        )
         multiclass_predictions = self.multiclass_model.predict(suspicious_samples)
         if len(multiclass_predictions) != len(suspicious_samples):
             raise RuntimeError(
@@ -316,13 +374,24 @@ class BatchDetectionService:
 
         classified_attacks = []
         for local_idx, attack_type_id in enumerate(multiclass_predictions):
+            batch_index = attack_indices[local_idx]
+            binary_decision = binary_decisions[batch_index]
             sample_probabilities = probabilities[local_idx] if probabilities else None
             confidence = _max_probability(sample_probabilities)
             workflow_attack_type_id = None
             workflow_report = None
+            probability_context = _build_probability_context(
+                batch_index=batch_index,
+                binary_decision=binary_decision,
+                multiclass_prediction=int(attack_type_id),
+                multiclass_probabilities=sample_probabilities,
+                binary_min_confidence=self.binary_min_confidence,
+                multiclass_min_confidence=self.multiclass_min_confidence,
+            )
             if self.use_multiclass_crew:
                 workflow_attack_type_id, workflow_report = self._run_multiclass_workflow(
-                    suspicious_samples[local_idx]
+                    suspicious_samples[local_idx],
+                    probability_context,
                 )
 
             final_attack_type_id = (
@@ -331,24 +400,52 @@ class BatchDetectionService:
                 else int(attack_type_id)
             )
             decision_status = "accepted"
+            rejection_reason = ""
             if confidence is not None and confidence < self.multiclass_min_confidence:
                 decision_status = "needs_specialist_review"
+                rejection_reason = (
+                    f"Baixa confiança multiclasse: {confidence:.3f} "
+                    f"< {self.multiclass_min_confidence:.3f}."
+                )
             elif workflow_attack_type_id is not None and int(workflow_attack_type_id) != int(attack_type_id):
                 decision_status = "needs_specialist_review"
+                rejection_reason = (
+                    "Divergência entre modelo probabilístico "
+                    f"({int(attack_type_id)}) e workflow multiclasse ({int(workflow_attack_type_id)})."
+                )
+            elif final_attack_type_id == 99:
+                decision_status = "needs_specialist_review"
+                rejection_reason = "Workflow multiclasse retornou rejeição/Normal para amostra suspeita."
 
             classified_attacks.append(
                 ClassifiedSample(
-                    batch_index=attack_indices[local_idx],
+                    batch_index=batch_index,
                     attack_type_id=final_attack_type_id,
                     attack_type_label=ATTACK_LABELS.get(final_attack_type_id, f"Classe_{final_attack_type_id}"),
+                    binary_probabilities=binary_decision.probabilities,
+                    binary_confidence=binary_decision.confidence,
                     model_attack_type_id=int(attack_type_id),
                     workflow_attack_type_id=workflow_attack_type_id,
                     probabilities=sample_probabilities,
                     confidence=confidence,
                     decision_status=decision_status,
+                    rejection_reason=rejection_reason,
                     report=workflow_report,
                 )
             )
+        workflow_trace.append(
+            {
+                "stage": "multiclass",
+                "status": "crew" if self.use_multiclass_crew else "direct_model",
+                "sample_count": len(suspicious_samples),
+                "accepted_count": len([
+                    item for item in classified_attacks if item.decision_status == "accepted"
+                ]),
+                "review_count": len([
+                    item for item in classified_attacks if item.decision_status != "accepted"
+                ]),
+            }
+        )
 
         result = BatchDetectionResult(
             binary_predictions=binary_predictions,
@@ -356,18 +453,33 @@ class BatchDetectionService:
             binary_decisions=binary_decisions,
             review_indices=review_indices,
             classified_attacks=classified_attacks,
+            workflow_trace=workflow_trace,
         )
         response_plan, response_status = self._run_incident_response_workflow(
             result.primary_attack_type_label
         )
         result.incident_response_plan = response_plan
         result.incident_response_status = response_status
+        workflow_trace.append(
+            {
+                "stage": "incident_response",
+                "status": response_status,
+                "attack_label": result.primary_attack_type_label,
+            }
+        )
         remediation_suggestion, remediation_status = self._run_remediation_workflow(
             result.primary_attack_type_label,
             result,
         )
         result.remediation_suggestion = remediation_suggestion
         result.remediation_suggestion_status = remediation_status
+        workflow_trace.append(
+            {
+                "stage": "remediation",
+                "status": remediation_status,
+                "attack_label": result.primary_attack_type_label,
+            }
+        )
         return result
 
 
@@ -480,6 +592,91 @@ def _max_probability(probabilities: list[float] | None) -> float | None:
     if not probabilities:
         return None
     return max(float(value) for value in probabilities)
+
+
+def _build_probability_context(
+    batch_index: int,
+    binary_decision: BinarySampleDecision,
+    multiclass_prediction: int,
+    multiclass_probabilities: list[float] | None,
+    binary_min_confidence: float,
+    multiclass_min_confidence: float,
+) -> dict[str, Any]:
+    return {
+        "batch_index": batch_index,
+        "binary_stage": {
+            "prediction": binary_decision.prediction,
+            "probabilities": binary_decision.probabilities,
+            "confidence": binary_decision.confidence,
+            "min_confidence": binary_min_confidence,
+            "decision_status": binary_decision.decision_status,
+        },
+        "multiclass_stage": {
+            "model_prediction": multiclass_prediction,
+            "model_prediction_label": ATTACK_LABELS.get(
+                multiclass_prediction,
+                f"Classe_{multiclass_prediction}",
+            ),
+            "probabilities": _label_probabilities(multiclass_probabilities),
+            "raw_probabilities": multiclass_probabilities,
+            "confidence": _max_probability(multiclass_probabilities),
+            "min_confidence": multiclass_min_confidence,
+        },
+        "rejection_policy": {
+            "return_99_when_multiclass_confidence_below_threshold": True,
+            "send_to_specialist_when_workflow_disagrees_with_probability_model": True,
+        },
+    }
+
+
+def _build_binary_probability_context(
+    probabilities: list[list[float]] | None,
+    min_confidence: float,
+) -> dict[str, Any]:
+    rows = []
+    for idx, row in enumerate(probabilities or []):
+        confidence = _max_probability(row)
+        predicted_class = _argmax(row)
+        rows.append(
+            {
+                "batch_index": idx,
+                "model_prediction": predicted_class,
+                "model_prediction_label": "attack" if predicted_class == 1 else "normal",
+                "probabilities": {
+                    "normal": float(row[0]) if len(row) > 0 else None,
+                    "attack": float(row[1]) if len(row) > 1 else None,
+                },
+                "confidence": confidence,
+                "min_confidence": min_confidence,
+                "reject_if_below_min_confidence": True,
+            }
+        )
+    return {
+        "samples": rows,
+        "rejection_policy": {
+            "return_prediction_from_probability_model_when_confident": True,
+            "send_to_specialist_review_when_confidence_below_threshold": True,
+        },
+    }
+
+
+def _argmax(values: list[float] | None) -> int | None:
+    if not values:
+        return None
+    return max(range(len(values)), key=lambda idx: values[idx])
+
+
+def _label_probabilities(probabilities: list[float] | None) -> list[dict[str, Any]]:
+    if not probabilities:
+        return []
+    return [
+        {
+            "class_id": idx,
+            "label": ATTACK_LABELS.get(idx, f"Classe_{idx}"),
+            "probability": float(probability),
+        }
+        for idx, probability in enumerate(probabilities)
+    ]
 
 
 def _read_float_env(name: str, default: float) -> float:

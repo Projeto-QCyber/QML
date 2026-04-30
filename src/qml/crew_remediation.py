@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from qml.utils.api_call_models import _llm_coder_response
+from qml.utils.runtime import crew_verbose
 
 
 @CrewBase
@@ -16,7 +17,7 @@ class RemediationChatCrew:
         return Agent(
             config=self.agents_config["remediation_operator_assistant"],
             llm=_llm_coder_response(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False,
             max_iter=2,
         )
@@ -35,5 +36,5 @@ class RemediationChatCrew:
             agents=[self.remediation_operator_assistant()],
             tasks=[self.remediation_chat()],
             process=Process.sequential,
-            verbose=True,
+            verbose=crew_verbose(),
         )

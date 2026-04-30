@@ -60,9 +60,16 @@ validate_results:
     - Analyst 1 votes: {analyze_and_vote_1.output}
     - Analyst 2 votes: {analyze_and_vote_2.output}
 
+    BINARY PROBABILITY CONTEXT:
+    ---
+    {binary_probability_context}
+    ---
+
     Your task is to analyze their votes and provide a final verdict.
-    - If both analysts agree, accept their consensus.
-    - If they disagree, use your expert judgment.
+    - If both analysts agree and the probability context has sufficient confidence, accept their consensus.
+    - If confidence is below the configured threshold, keep the model vote in "predictions" but treat
+      the sample as a rejection candidate for specialist review in your reasoning.
+    - If analysts disagree, use the probability context to resolve the vote.
     - Respond STRICTLY in JSON with a key "predictions" containing ONLY the list of final binary votes.
     - Do not include any extra text outside of the JSON.
 
@@ -73,4 +80,3 @@ validate_results:
     }
     ```
   agent: cybersecurity_specialist
-
