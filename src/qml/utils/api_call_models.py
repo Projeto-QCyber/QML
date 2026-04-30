@@ -80,18 +80,18 @@ def _llm_by_provider(max_tokens: int) -> LLM:
 
 
 def _llm_default() -> LLM:
-    return _llm_by_provider(max_tokens=1024)
+    return _llm_by_provider(max_tokens=128)
 
 
 def _llm_leader() -> LLM:
-    return _llm_by_provider(max_tokens=2048)
+    return _llm_by_provider(max_tokens=256)
 
 
 def _llm_openai_default() -> LLM:
     """Explicit OpenAI factory for quick latency tests without changing callers."""
-    return _llm_openai(max_tokens=1024)
+    return _llm_openai(max_tokens=128)
 
 
 def _llm_openai_leader() -> LLM:
     """Explicit OpenAI factory for quick latency tests without changing callers."""
-    return _llm_openai(max_tokens=2048)
+    return _llm_openai(max_tokens=256)
