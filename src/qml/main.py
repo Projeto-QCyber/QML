@@ -9,7 +9,7 @@ os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 from qml.services.detection import BatchDetectionService, build_detection_report
-from qml.utils.runtime import env_flag
+from qml.utils.runtime import default_crew_enabled, env_flag
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -52,10 +52,14 @@ def run() -> None:
     os.environ.setdefault("QCYBER_CREW_VERBOSE", "1")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     samples, labels = _load_default_samples()
-    use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=True)
-    use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=True)
-    use_incident_response_crew = env_flag("QCYBER_USE_INCIDENT_RESPONSE_CREW", default=True)
-    use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=True)
+    crew_default = default_crew_enabled()
+    use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=crew_default)
+    use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=crew_default)
+    use_incident_response_crew = env_flag(
+        "QCYBER_USE_INCIDENT_RESPONSE_CREW",
+        default=crew_default,
+    )
+    use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=crew_default)
 
     if labels:
         print(f"Loaded sample labels: {labels}")

@@ -32,9 +32,12 @@ analyze_and_vote_1:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
     - Do NOT reformat or alter the samples in any way.
+    - Return one binary vote for EACH input sample, preserving the original order.
+    - Do NOT return only the samples classified as attacks.
+    - If the input has 5 samples, the final list MUST have exactly 5 values.
     - Output EXACTLY and ONLY what the tool returns (e.g., [0/1,...]).
   expected_output: >
-    A list of 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of exactly 5 binary votes (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
@@ -48,9 +51,13 @@ analyze_and_vote_2:
     Strict rules for the tool call:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
-    - Do NOT modify the data in any way. Output EXACTLY the result from the tool.
+    - Do NOT modify the data in any way.
+    - Return one binary vote for EACH input sample, preserving the original order.
+    - Do NOT return only the samples classified as attacks.
+    - If the input has 5 samples, the final list MUST have exactly 5 values.
+    - Output EXACTLY the result from the tool.
   expected_output: >
-    A list of 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of exactly 5 binary votes (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_2
 
 
@@ -70,6 +77,9 @@ validate_results:
     - If confidence is below the configured threshold, keep the model vote in "predictions" but treat
       the sample as a rejection candidate for specialist review in your reasoning.
     - If analysts disagree, use the probability context to resolve the vote.
+    - Return one final binary prediction for EACH original input sample, preserving order.
+    - Do NOT return only attack samples. Normal samples must remain in the list as 0.
+    - For a 5-sample batch, "predictions" MUST contain exactly 5 integers.
     - Respond STRICTLY in JSON with a key "predictions" containing ONLY the list of final binary votes.
     - Do not include any extra text outside of the JSON.
 

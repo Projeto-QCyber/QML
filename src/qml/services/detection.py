@@ -232,9 +232,12 @@ class BatchDetectionService:
             }
         )
         raw_output = getattr(result, "raw", str(result))
-        predictions = _extract_binary_predictions(raw_output)
+        predictions = _extract_binary_predictions(raw_output, expected_count=len(samples))
         if not predictions:
-            raise RuntimeError(f"A crew binária não retornou predições válidas. Saída: {raw_output}")
+            raise RuntimeError(
+                "A crew binária não retornou uma lista de predições com "
+                f"{len(samples)} item(ns). Saída: {raw_output}"
+            )
         return predictions
 
     def _build_binary_decisions(
@@ -288,7 +291,7 @@ class BatchDetectionService:
             }
         )
         raw_output = getattr(result, "raw", str(result))
-        predictions = _extract_binary_predictions(raw_output)
+        predictions = _extract_binary_predictions(raw_output, expected_count=1)
         report = ""
         parsed = _extract_json_object(raw_output)
         if isinstance(parsed, dict):
@@ -599,7 +602,7 @@ def build_detection_report(result: BatchDetectionResult, shap_explanation: str =
     return report
 
 
-def _extract_binary_predictions(text: str) -> list[int]:
+def _extract_binary_predictions(text: str, expected_count: int | None = None) -> list[int]:
     if not text:
         return []
 
@@ -607,13 +610,15 @@ def _extract_binary_predictions(text: str) -> list[int]:
     if isinstance(candidate, dict):
         raw_predictions = candidate.get("predictions") or candidate.get("votes")
         if isinstance(raw_predictions, list):
-            return [int(value) for value in raw_predictions]
+            parsed = [int(value) for value in raw_predictions]
+            if _matches_expected_count(parsed, expected_count):
+                return parsed
         if isinstance(raw_predictions, str):
-            parsed = _extract_first_int_list(raw_predictions)
+            parsed = _extract_first_int_list(raw_predictions, expected_count=expected_count)
             if parsed:
                 return parsed
 
-    return _extract_first_int_list(text)
+    return _extract_first_int_list(text, expected_count=expected_count)
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:
@@ -644,17 +649,31 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
     return None
 
 
-def _extract_first_int_list(text: str) -> list[int]:
-    match = re.search(r"\[(?:\s*[-+]?\d+\s*,?\s*)+\]", text)
-    if not match:
-        return []
-    try:
-        parsed = json.loads(match.group(0))
-        if isinstance(parsed, list):
-            return [int(value) for value in parsed]
-    except json.JSONDecodeError:
-        pass
-    return [int(value) for value in re.findall(r"[-+]?\d+", match.group(0))]
+def _extract_first_int_list(text: str, expected_count: int | None = None) -> list[int]:
+    fallback: list[int] = []
+    for match in re.finditer(r"\[(?:\s*[-+]?\d+\s*,?\s*)+\]", text):
+        raw_list = match.group(0)
+        try:
+            parsed = json.loads(raw_list)
+            if isinstance(parsed, list):
+                values = [int(value) for value in parsed]
+            else:
+                values = []
+        except json.JSONDecodeError:
+            values = [int(value) for value in re.findall(r"[-+]?\d+", raw_list)]
+
+        if not values:
+            continue
+        if _matches_expected_count(values, expected_count):
+            return values
+        if not fallback:
+            fallback = values
+
+    return [] if expected_count is not None else fallback
+
+
+def _matches_expected_count(values: list[int], expected_count: int | None) -> bool:
+    return expected_count is None or len(values) == expected_count
 
 
 def _max_probability(probabilities: list[float] | None) -> float | None:
