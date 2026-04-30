@@ -393,6 +393,12 @@ def analisar_pacote():
             incident_plan = detection_result.incident_response_plan or ""
             if incident_plan:
                 print(f"[{req_id}] [IR] Plano de resposta gerado (até 800 chars):\n{incident_plan[:800]}", flush=True)
+            if detection_result.attack_response_plans:
+                print(
+                    f"[{req_id}] [IR] Planos por tipo: "
+                    f"{[(item.get('attack_type_label'), item.get('batch_indices')) for item in detection_result.attack_response_plans]}",
+                    flush=True,
+                )
 
         print(f"[{req_id}] ✅ Análise concluída. Ataque tipo: {tipo_ataque_label} para o dispositivo: {device_id}", flush=True)
 
@@ -441,6 +447,13 @@ def analisar_pacote():
                 partes_relatorio.append(f"Relatório de Classificação:\n{explanation_text.strip()}")
             if incident_plan and str(incident_plan).strip():
                 partes_relatorio.append(f"Plano de Resposta ao Incidente (Crew):\n{str(incident_plan).strip()}")
+            if "detection_result" in locals() and detection_result.attack_remediation_suggestions:
+                remediation_text = json.dumps(
+                    detection_result.attack_remediation_suggestions,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                partes_relatorio.append(f"Sugestões de Remediação por Tipo:\n{remediation_text}")
 
             # Constrói texto do relatório para persistência
             try:
@@ -468,7 +481,12 @@ def analisar_pacote():
                 titulo = f"Detecção de {tipo_ataque_nome}"
                 resumo_tecnico = f"Detecção do tipo '{tipo_ataque_nome}' registrada pelo analisador."
                 try:
-                    acoes_json = json.dumps([incident_plan or ""])
+                    acoes_payload = {
+                        "incident_response_plans": detection_result.attack_response_plans,
+                        "remediation_suggestions": detection_result.attack_remediation_suggestions,
+                        "legacy_combined_incident_plan": incident_plan or "",
+                    }
+                    acoes_json = json.dumps(acoes_payload, ensure_ascii=False)
                 except Exception:
                     acoes_json = json.dumps({"plano": ""})
 
@@ -506,6 +524,8 @@ def analisar_pacote():
                 },
                 "incident": {
                     "plan": locals().get("incident_plan", ""),
+                    "plans_by_attack_type": locals().get("detection_result").attack_response_plans if "detection_result" in locals() else [],
+                    "remediation_by_attack_type": locals().get("detection_result").attack_remediation_suggestions if "detection_result" in locals() else [],
                 },
                 "db": {
                     "tipo_ataque_fk": locals().get("tipo_ataque_fk", None),
@@ -539,6 +559,8 @@ def analisar_pacote():
                 "predicoes_binarias": locals().get("bin_preds", []),
                 "indices_suspeitos": locals().get("detection_result").attack_indices if "detection_result" in locals() else [],
                 "ataques_classificados": locals().get("detection_result").to_dict().get("classified_attacks", []) if "detection_result" in locals() else [],
+                "planos_resposta_por_tipo": locals().get("detection_result").attack_response_plans if "detection_result" in locals() else [],
+                "remediacoes_por_tipo": locals().get("detection_result").attack_remediation_suggestions if "detection_result" in locals() else [],
             },
         }
         return jsonify(response_payload), 201

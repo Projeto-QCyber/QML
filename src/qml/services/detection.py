@@ -65,8 +65,10 @@ class BatchDetectionResult:
     classified_attacks: list[ClassifiedSample] = field(default_factory=list)
     incident_response_plan: str = ""
     incident_response_status: str = "not_applicable"
+    attack_response_plans: list[dict[str, Any]] = field(default_factory=list)
     remediation_suggestion: dict[str, Any] = field(default_factory=dict)
     remediation_suggestion_status: str = "not_applicable"
+    attack_remediation_suggestions: list[dict[str, Any]] = field(default_factory=list)
     workflow_trace: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -133,8 +135,10 @@ class BatchDetectionResult:
             "primary_attack_type_label": self.primary_attack_type_label,
             "incident_response_status": self.incident_response_status,
             "incident_response_plan": self.incident_response_plan,
+            "attack_response_plans": self.attack_response_plans,
             "remediation_suggestion_status": self.remediation_suggestion_status,
             "remediation_suggestion": self.remediation_suggestion,
+            "attack_remediation_suggestions": self.attack_remediation_suggestions,
             "workflow_trace": self.workflow_trace,
         }
 
@@ -337,10 +341,35 @@ class BatchDetectionService:
             )
             return "", "crew_failed"
 
+    def _run_incident_response_workflows(
+        self,
+        result: BatchDetectionResult,
+    ) -> tuple[list[dict[str, Any]], str, str]:
+        groups = _accepted_attack_groups(result.classified_attacks)
+        if not groups:
+            return [], "not_applicable", ""
+
+        plans = []
+        statuses = []
+        for group in groups:
+            plan, status = self._run_incident_response_workflow(group["attack_type_label"])
+            statuses.append(status)
+            plans.append(
+                {
+                    **group,
+                    "status": status,
+                    "plan": plan,
+                }
+            )
+
+        combined_plan = _combine_attack_response_plans(plans)
+        return plans, _aggregate_workflow_status(statuses), combined_plan
+
     def _run_remediation_workflow(
         self,
         attack_label: str,
         result: BatchDetectionResult,
+        grouped_attack: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]:
         if not self.use_remediation_crew:
             return {}, "disabled"
@@ -353,6 +382,7 @@ class BatchDetectionService:
             "primary_attack_type": attack_label,
             "attack_indices": result.attack_indices,
             "review_indices": result.review_indices,
+            "grouped_attack": grouped_attack,
             "classified_attacks": result.to_dict().get("classified_attacks", []),
             "confidence_policy": {
                 "binary_min_confidence": self.binary_min_confidence,
@@ -374,6 +404,34 @@ class BatchDetectionService:
                 flush=True,
             )
             return {}, "crew_failed"
+
+    def _run_remediation_workflows(
+        self,
+        result: BatchDetectionResult,
+    ) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
+        groups = _accepted_attack_groups(result.classified_attacks)
+        if not groups:
+            return [], "not_applicable", {}
+
+        suggestions = []
+        statuses = []
+        for group in groups:
+            suggestion, status = self._run_remediation_workflow(
+                group["attack_type_label"],
+                result,
+                grouped_attack=group,
+            )
+            statuses.append(status)
+            suggestions.append(
+                {
+                    **group,
+                    "status": status,
+                    "suggestion": suggestion,
+                }
+            )
+
+        primary_suggestion = suggestions[0]["suggestion"] if suggestions else {}
+        return suggestions, _aggregate_workflow_status(statuses), primary_suggestion
 
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
         self._last_binary_workflow_status = "not_started"
@@ -556,29 +614,32 @@ class BatchDetectionService:
             classified_attacks=classified_attacks,
             workflow_trace=workflow_trace,
         )
-        response_plan, response_status = self._run_incident_response_workflow(
-            result.primary_attack_type_label
+        response_plans, response_status, combined_response_plan = self._run_incident_response_workflows(
+            result
         )
-        result.incident_response_plan = response_plan
+        result.attack_response_plans = response_plans
+        result.incident_response_plan = combined_response_plan
         result.incident_response_status = response_status
         workflow_trace.append(
             {
                 "stage": "incident_response",
                 "status": response_status,
-                "attack_label": result.primary_attack_type_label,
+                "attack_labels": [item["attack_type_label"] for item in response_plans],
+                "plan_count": len(response_plans),
             }
         )
-        remediation_suggestion, remediation_status = self._run_remediation_workflow(
-            result.primary_attack_type_label,
-            result,
+        remediation_suggestions, remediation_status, primary_remediation_suggestion = (
+            self._run_remediation_workflows(result)
         )
-        result.remediation_suggestion = remediation_suggestion
+        result.attack_remediation_suggestions = remediation_suggestions
+        result.remediation_suggestion = primary_remediation_suggestion
         result.remediation_suggestion_status = remediation_status
         workflow_trace.append(
             {
                 "stage": "remediation",
                 "status": remediation_status,
-                "attack_label": result.primary_attack_type_label,
+                "attack_labels": [item["attack_type_label"] for item in remediation_suggestions],
+                "suggestion_count": len(remediation_suggestions),
             }
         )
         return result
@@ -619,11 +680,21 @@ def build_detection_report(result: BatchDetectionResult, shap_explanation: str =
             "na etapa multiclasse."
         )
     if result.incident_response_status == "generated":
-        report += " Um plano de resposta ao incidente foi gerado para o tipo primário aceito."
+        report += (
+            f" Foram gerados {len(result.attack_response_plans)} plano(s) de resposta, "
+            "um por tipo de ataque aceito."
+        )
+    elif result.incident_response_status == "partially_generated":
+        report += " Alguns planos de resposta por tipo de ataque foram gerados."
     elif result.incident_response_status == "disabled":
         report += " A geração automática do plano de resposta está desabilitada neste fluxo."
     if result.remediation_suggestion_status == "generated":
-        report += " Uma sugestão inicial de remediação assistida foi gerada para o operador."
+        report += (
+            f" Foram geradas {len(result.attack_remediation_suggestions)} sugestão(ões) "
+            "de remediação assistida por tipo de ataque."
+        )
+    elif result.remediation_suggestion_status == "partially_generated":
+        report += " Algumas sugestões de remediação por tipo de ataque foram geradas."
 
     if shap_explanation.strip():
         report += f"\n\nPrincipais evidências SHAP:\n{shap_explanation.strip()}"
@@ -822,6 +893,75 @@ def _top_label_probabilities(
         }
         for rank, idx in enumerate(ranked_indices)
     ]
+
+
+def _accepted_attack_groups(classified_attacks: list[ClassifiedSample]) -> list[dict[str, Any]]:
+    groups: dict[int, dict[str, Any]] = {}
+    for item in classified_attacks:
+        if item.decision_status != "accepted" or item.attack_type_id == 99:
+            continue
+
+        group = groups.setdefault(
+            item.attack_type_id,
+            {
+                "attack_type_id": item.attack_type_id,
+                "attack_type_label": item.attack_type_label,
+                "batch_indices": [],
+                "sample_count": 0,
+                "max_confidence": None,
+                "mean_confidence": None,
+            },
+        )
+        group["batch_indices"].append(item.batch_index)
+        group["sample_count"] += 1
+        if item.confidence is not None:
+            current = group["max_confidence"]
+            group["max_confidence"] = (
+                item.confidence if current is None else max(float(current), item.confidence)
+            )
+
+    for group in groups.values():
+        confidences = [
+            item.confidence
+            for item in classified_attacks
+            if (
+                item.decision_status == "accepted"
+                and item.attack_type_id == group["attack_type_id"]
+                and item.confidence is not None
+            )
+        ]
+        if confidences:
+            group["mean_confidence"] = sum(confidences) / len(confidences)
+
+    return list(groups.values())
+
+
+def _aggregate_workflow_status(statuses: list[str]) -> str:
+    if not statuses:
+        return "not_applicable"
+    unique_statuses = set(statuses)
+    if len(unique_statuses) == 1:
+        return statuses[0]
+    if "generated" in unique_statuses:
+        return "partially_generated"
+    if "crew_failed" in unique_statuses:
+        return "crew_failed"
+    if "disabled" in unique_statuses:
+        return "disabled"
+    return statuses[0]
+
+
+def _combine_attack_response_plans(plans: list[dict[str, Any]]) -> str:
+    sections = []
+    for item in plans:
+        plan = str(item.get("plan") or "").strip()
+        if not plan:
+            continue
+        indices = ", ".join(str(index) for index in item.get("batch_indices", []))
+        sections.append(
+            f"## {item.get('attack_type_label')} (batch_index: {indices})\n\n{plan}"
+        )
+    return "\n\n".join(sections)
 
 
 def _multiclass_trace_status(
