@@ -43,14 +43,13 @@ def _llm_leader() -> LLM:
         extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 
-def __llm_coder_response() -> LLM:
+def _llm_coder_response() -> LLM:
     return LLM(
-        model="ollama/qwen3:8b-q4_K_M",
+        model=os.getenv("QML_CODER_MODEL", "ollama/qwen3-coder:latest"),
         base_url=_get_ollama_base_url(),
         api_key="ollama",
-        temperature=0.7,
+        temperature=0.2,
         max_tokens=2048,
-        extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 '''
 

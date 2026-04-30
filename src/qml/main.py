@@ -54,6 +54,7 @@ def run() -> None:
         use_binary_crew=True,
         use_multiclass_crew=True,
         use_incident_response_crew=True,
+        use_remediation_crew=True,
     ).predict(samples)
     payload = result.to_dict()
     payload["report"] = build_detection_report(result)

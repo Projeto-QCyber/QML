@@ -15,6 +15,7 @@ from qml.utils.generic import get_env_var
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 from qml.crew_response import IncidentResponseCrew
 from qml.services.detection import BatchDetectionService, build_detection_report
+from qml.services.remediation import run_remediation_chat
 from qml.tools.shap_explain import ExplainTop2SHAP
 os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
@@ -22,6 +23,30 @@ os.environ['OTEL_SDK_DISABLED'] = 'true'
 
 app = Flask(__name__)
 load_dotenv()
+
+
+@app.route('/remediation/chat', methods=['POST'])
+def remediation_chat():
+    data = request.get_json(silent=True) or {}
+    attack_label = str(data.get("attack_label") or "").strip()
+    operator_message = str(data.get("operator_message") or "").strip()
+    context = data.get("context")
+
+    if not attack_label:
+        return jsonify({"error": "'attack_label' é obrigatório."}), 400
+    if not operator_message:
+        return jsonify({"error": "'operator_message' é obrigatório."}), 400
+
+    try:
+        response = run_remediation_chat(
+            attack_label=attack_label,
+            operator_message=operator_message,
+            context=context,
+        )
+        return jsonify(response), 200
+    except Exception as exc:
+        print(f"[REMEDIATION] Erro ao gerar chat de remediação: {exc}\n{traceback.format_exc()}", flush=True)
+        return jsonify({"error": "Falha ao gerar recomendações de remediação."}), 500
 
 def resolve_tipo_ataque_id(cursor, tipo_ataque_label):
     """

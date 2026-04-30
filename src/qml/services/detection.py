@@ -61,6 +61,8 @@ class BatchDetectionResult:
     classified_attacks: list[ClassifiedSample] = field(default_factory=list)
     incident_response_plan: str = ""
     incident_response_status: str = "not_applicable"
+    remediation_suggestion: dict[str, Any] = field(default_factory=dict)
+    remediation_suggestion_status: str = "not_applicable"
 
     @property
     def window_has_attack(self) -> bool:
@@ -122,6 +124,8 @@ class BatchDetectionResult:
             "primary_attack_type_label": self.primary_attack_type_label,
             "incident_response_status": self.incident_response_status,
             "incident_response_plan": self.incident_response_plan,
+            "remediation_suggestion_status": self.remediation_suggestion_status,
+            "remediation_suggestion": self.remediation_suggestion,
         }
 
 
@@ -133,12 +137,14 @@ class BatchDetectionService:
         use_binary_crew: bool = False,
         use_multiclass_crew: bool = False,
         use_incident_response_crew: bool = False,
+        use_remediation_crew: bool = False,
         binary_min_confidence: float | None = None,
         multiclass_min_confidence: float | None = None,
     ) -> None:
         self.use_binary_crew = use_binary_crew
         self.use_multiclass_crew = use_multiclass_crew
         self.use_incident_response_crew = use_incident_response_crew
+        self.use_remediation_crew = use_remediation_crew
         self.binary_min_confidence = (
             binary_min_confidence
             if binary_min_confidence is not None
@@ -242,6 +248,34 @@ class BatchDetectionService:
             return "", "empty"
         return plan, "generated"
 
+    def _run_remediation_workflow(
+        self,
+        attack_label: str,
+        result: BatchDetectionResult,
+    ) -> tuple[dict[str, Any], str]:
+        if not self.use_remediation_crew:
+            return {}, "disabled"
+        if not attack_label or attack_label.lower() == "normal":
+            return {}, "not_applicable"
+
+        from qml.services.remediation import run_initial_remediation_suggestion
+
+        context = {
+            "primary_attack_type": attack_label,
+            "attack_indices": result.attack_indices,
+            "review_indices": result.review_indices,
+            "classified_attacks": result.to_dict().get("classified_attacks", []),
+            "confidence_policy": {
+                "binary_min_confidence": self.binary_min_confidence,
+                "multiclass_min_confidence": self.multiclass_min_confidence,
+            },
+        }
+        suggestion = run_initial_remediation_suggestion(
+            attack_label=attack_label,
+            context=context,
+        )
+        return suggestion, "generated"
+
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
         binary_predictions = self._predict_binary(samples)
         if len(binary_predictions) != len(samples):
@@ -328,6 +362,12 @@ class BatchDetectionService:
         )
         result.incident_response_plan = response_plan
         result.incident_response_status = response_status
+        remediation_suggestion, remediation_status = self._run_remediation_workflow(
+            result.primary_attack_type_label,
+            result,
+        )
+        result.remediation_suggestion = remediation_suggestion
+        result.remediation_suggestion_status = remediation_status
         return result
 
 
@@ -369,6 +409,8 @@ def build_detection_report(result: BatchDetectionResult, shap_explanation: str =
         report += " Um plano de resposta ao incidente foi gerado para o tipo primário aceito."
     elif result.incident_response_status == "disabled":
         report += " A geração automática do plano de resposta está desabilitada neste fluxo."
+    if result.remediation_suggestion_status == "generated":
+        report += " Uma sugestão inicial de remediação assistida foi gerada para o operador."
 
     if shap_explanation.strip():
         report += f"\n\nPrincipais evidências SHAP:\n{shap_explanation.strip()}"
