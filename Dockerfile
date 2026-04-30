@@ -20,7 +20,6 @@ ENV PYTHONPATH=/app/src
 # Copy the application code
 COPY --chown=appuser:appuser ./IA ./IA
 COPY --chown=appuser:appuser ./src ./src
-COPY --chown=appuser:appuser ./test_api.py .
 COPY --chown=appuser:appuser ./data .
 COPY --chown=appuser:appuser ./meta-learning .
 COPY --chown=appuser:appuser pyproject.toml .

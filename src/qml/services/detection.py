@@ -165,6 +165,8 @@ class BatchDetectionService:
         )
         self.binary_model = RFModel(classification="binary")
         self._multiclass_model: RFModel | None = None
+        self._last_binary_workflow_status = "not_started"
+        self._multiclass_workflow_failures = 0
 
     @property
     def multiclass_model(self) -> RFModel:
@@ -178,7 +180,21 @@ class BatchDetectionService:
         probabilities: list[list[float]] | None,
     ) -> list[int]:
         if self.use_binary_crew:
-            return self._predict_binary_with_crew(samples, probabilities)
+            try:
+                predictions = self._predict_binary_with_crew(samples, probabilities)
+                self._last_binary_workflow_status = "crew"
+                return predictions
+            except Exception as exc:
+                if not _read_bool_env("QCYBER_ALLOW_CREW_FALLBACK", True):
+                    raise
+                self._last_binary_workflow_status = "crew_failed_model_fallback"
+                print(
+                    "[QCyber] Crew binária falhou; usando predição direta do modelo "
+                    f"probabilístico. Motivo: {_brief_exception(exc)}",
+                    flush=True,
+                )
+                return self.binary_model.predict(samples)
+        self._last_binary_workflow_status = "direct_model"
         return self.binary_model.predict(samples)
 
     def _predict_binary_with_crew(
@@ -275,11 +291,21 @@ class BatchDetectionService:
 
         from qml.crew_response import IncidentResponseCrew
 
-        result = IncidentResponseCrew().crew().kickoff(inputs={"attack_label": attack_label})
-        plan = getattr(result, "raw", str(result)).strip()
-        if not plan:
-            return "", "empty"
-        return plan, "generated"
+        try:
+            result = IncidentResponseCrew().crew().kickoff(inputs={"attack_label": attack_label})
+            plan = getattr(result, "raw", str(result)).strip()
+            if not plan:
+                return "", "empty"
+            return plan, "generated"
+        except Exception as exc:
+            if not _read_bool_env("QCYBER_ALLOW_CREW_FALLBACK", True):
+                raise
+            print(
+                "[QCyber] Crew de resposta a incidente falhou; mantendo resultado "
+                f"de detecção sem plano gerado. Motivo: {_brief_exception(exc)}",
+                flush=True,
+            )
+            return "", "crew_failed"
 
     def _run_remediation_workflow(
         self,
@@ -303,13 +329,25 @@ class BatchDetectionService:
                 "multiclass_min_confidence": self.multiclass_min_confidence,
             },
         }
-        suggestion = run_initial_remediation_suggestion(
-            attack_label=attack_label,
-            context=context,
-        )
-        return suggestion, "generated"
+        try:
+            suggestion = run_initial_remediation_suggestion(
+                attack_label=attack_label,
+                context=context,
+            )
+            return suggestion, "generated"
+        except Exception as exc:
+            if not _read_bool_env("QCYBER_ALLOW_CREW_FALLBACK", True):
+                raise
+            print(
+                "[QCyber] Crew de remediação falhou; mantendo resultado de detecção "
+                f"sem sugestão automática. Motivo: {_brief_exception(exc)}",
+                flush=True,
+            )
+            return {}, "crew_failed"
 
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
+        self._last_binary_workflow_status = "not_started"
+        self._multiclass_workflow_failures = 0
         workflow_trace: list[dict[str, Any]] = [
             {
                 "stage": "input",
@@ -338,7 +376,7 @@ class BatchDetectionService:
         workflow_trace.append(
             {
                 "stage": "binary",
-                "status": "crew" if self.use_binary_crew else "direct_model",
+                "status": self._last_binary_workflow_status,
                 "sample_count": len(samples),
                 "accepted_attack_count": len(attack_indices),
                 "review_count": len(review_indices),
@@ -389,10 +427,20 @@ class BatchDetectionService:
                 multiclass_min_confidence=self.multiclass_min_confidence,
             )
             if self.use_multiclass_crew:
-                workflow_attack_type_id, workflow_report = self._run_multiclass_workflow(
-                    suspicious_samples[local_idx],
-                    probability_context,
-                )
+                try:
+                    workflow_attack_type_id, workflow_report = self._run_multiclass_workflow(
+                        suspicious_samples[local_idx],
+                        probability_context,
+                    )
+                except Exception as exc:
+                    if not _read_bool_env("QCYBER_ALLOW_CREW_FALLBACK", True):
+                        raise
+                    self._multiclass_workflow_failures += 1
+                    workflow_report = (
+                        "Workflow multiclasse indisponível; decisão baseada no modelo "
+                        f"probabilístico. Motivo: {_brief_exception(exc)}"
+                    )
+                    print(f"[QCyber] {workflow_report}", flush=True)
 
             final_attack_type_id = (
                 int(workflow_attack_type_id)
@@ -436,7 +484,11 @@ class BatchDetectionService:
         workflow_trace.append(
             {
                 "stage": "multiclass",
-                "status": "crew" if self.use_multiclass_crew else "direct_model",
+                "status": _multiclass_trace_status(
+                    self.use_multiclass_crew,
+                    self._multiclass_workflow_failures,
+                    len(suspicious_samples),
+                ),
                 "sample_count": len(suspicious_samples),
                 "accepted_count": len([
                     item for item in classified_attacks if item.decision_status == "accepted"
@@ -677,6 +729,34 @@ def _label_probabilities(probabilities: list[float] | None) -> list[dict[str, An
         }
         for idx, probability in enumerate(probabilities)
     ]
+
+
+def _multiclass_trace_status(
+    use_multiclass_crew: bool,
+    failures: int,
+    sample_count: int,
+) -> str:
+    if not use_multiclass_crew:
+        return "direct_model"
+    if failures == 0:
+        return "crew"
+    if failures >= sample_count:
+        return "crew_failed_model_fallback"
+    return "crew_partial_model_fallback"
+
+
+def _brief_exception(exc: Exception) -> str:
+    message = str(exc).strip()
+    if not message:
+        message = exc.__class__.__name__
+    return message.replace("\n", " ")[:300]
+
+
+def _read_bool_env(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None or raw_value.strip() == "":
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _read_float_env(name: str, default: float) -> float:

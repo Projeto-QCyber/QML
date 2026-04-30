@@ -179,9 +179,8 @@ def _llm_default(model_name: str | None = None, max_tokens: int | None = None) -
         model=selected_model,
         base_url=base_url,
         api_key="ollama",
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=selected_max_tokens,
-        extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 
 
@@ -196,9 +195,8 @@ def _llm_leader(model_name: str | None = None, max_tokens: int | None = None) ->
         model=selected_model,
         base_url=base_url,
         api_key="ollama",
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=selected_max_tokens,
-        extra_body={"stop": ["\n\n", "\n###", "```"]},
     )
 
 

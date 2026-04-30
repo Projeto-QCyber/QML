@@ -4,11 +4,15 @@ import pandas as pd
 from pathlib import Path
 from typing import Any
 
+os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+
 from qml.services.detection import BatchDetectionService, build_detection_report
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-DATA_PATH = ROOT_DIR / "data" / "dados_de_teste.csv"
+DATA_PATH = ROOT_DIR / "data" / "test" / "dados_de_teste.csv"
 OUTPUT_DIR = ROOT_DIR / "src" / "qml" / "output"
 
 
