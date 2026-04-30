@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
@@ -84,8 +86,9 @@ class BatchDetectionResult:
 class BatchDetectionService:
     """Deterministic model pipeline used before optional LLM interpretation."""
 
-    def __init__(self) -> None:
-        self.binary_model = RFModel(classification="binary")
+    def __init__(self, use_binary_crew: bool = False) -> None:
+        self.use_binary_crew = use_binary_crew
+        self.binary_model = None if use_binary_crew else RFModel(classification="binary")
         self._multiclass_model: RFModel | None = None
 
     @property
@@ -94,8 +97,25 @@ class BatchDetectionService:
             self._multiclass_model = RFModel(classification="multiclass")
         return self._multiclass_model
 
+    def _predict_binary(self, samples: list[dict[str, Any]]) -> list[int]:
+        if self.use_binary_crew:
+            return self._predict_binary_with_crew(samples)
+        if self.binary_model is None:
+            raise RuntimeError("Modelo binário direto não foi inicializado.")
+        return self.binary_model.predict(samples)
+
+    def _predict_binary_with_crew(self, samples: list[dict[str, Any]]) -> list[int]:
+        from qml.crew import CyberPredict
+
+        result = CyberPredict().crew().kickoff(inputs={"samples": samples})
+        raw_output = getattr(result, "raw", str(result))
+        predictions = _extract_binary_predictions(raw_output)
+        if not predictions:
+            raise RuntimeError(f"A crew binária não retornou predições válidas. Saída: {raw_output}")
+        return predictions
+
     def predict(self, samples: list[dict[str, Any]]) -> BatchDetectionResult:
-        binary_predictions = self.binary_model.predict(samples)
+        binary_predictions = self._predict_binary(samples)
         if len(binary_predictions) != len(samples):
             raise RuntimeError(
                 "O modelo binário retornou uma quantidade de predições diferente "
@@ -153,3 +173,61 @@ def build_detection_report(result: BatchDetectionResult, shap_explanation: str =
         report += f"\n\nPrincipais evidências SHAP:\n{shap_explanation.strip()}"
 
     return report
+
+
+def _extract_binary_predictions(text: str) -> list[int]:
+    if not text:
+        return []
+
+    candidate = _extract_json_object(text)
+    if isinstance(candidate, dict):
+        raw_predictions = candidate.get("predictions") or candidate.get("votes")
+        if isinstance(raw_predictions, list):
+            return [int(value) for value in raw_predictions]
+        if isinstance(raw_predictions, str):
+            parsed = _extract_first_int_list(raw_predictions)
+            if parsed:
+                return parsed
+
+    return _extract_first_int_list(text)
+
+
+def _extract_json_object(text: str) -> dict[str, Any] | None:
+    code_block = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL | re.IGNORECASE)
+    if code_block:
+        try:
+            parsed = json.loads(code_block.group(1).strip())
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    for match in re.findall(r"\{.*?\}", text, flags=re.DOTALL):
+        try:
+            parsed = json.loads(match)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            continue
+
+    return None
+
+
+def _extract_first_int_list(text: str) -> list[int]:
+    match = re.search(r"\[(?:\s*[-+]?\d+\s*,?\s*)+\]", text)
+    if not match:
+        return []
+    try:
+        parsed = json.loads(match.group(0))
+        if isinstance(parsed, list):
+            return [int(value) for value in parsed]
+    except json.JSONDecodeError:
+        pass
+    return [int(value) for value in re.findall(r"[-+]?\d+", match.group(0))]
