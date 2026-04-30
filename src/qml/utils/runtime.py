@@ -9,3 +9,14 @@ def env_flag(name: str, default: bool = False) -> bool:
 
 def crew_verbose(default: bool = False) -> bool:
     return env_flag("QCYBER_CREW_VERBOSE", default=default)
+
+
+def default_crew_enabled() -> bool:
+    env = (
+        os.getenv("QCYBER_ENV")
+        or os.getenv("APP_ENV")
+        or os.getenv("ENV_MODE")
+        or os.getenv("ENVIRONMENT")
+        or "DEV"
+    ).strip().upper()
+    return env != "TEST"

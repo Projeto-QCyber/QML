@@ -11,7 +11,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime, timezone
 from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
-from qml.utils.runtime import env_flag
+from qml.utils.runtime import default_crew_enabled, env_flag
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 from qml.services.detection import BatchDetectionService, build_detection_report
@@ -295,10 +295,14 @@ def analisar_pacote():
         # O modelo binário avalia a janela inteira; se houver amostras suspeitas,
         # o multiclasse roda somente nelas e consolida um tipo primário.
         samples_for_detection = inputs_for_detection.get("samples", [])
-        use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=True)
-        use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=True)
-        use_incident_response_crew = env_flag("QCYBER_USE_INCIDENT_RESPONSE_CREW", default=True)
-        use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=True)
+        crew_default = default_crew_enabled()
+        use_binary_crew = env_flag("QCYBER_USE_BINARY_CREW", default=crew_default)
+        use_multiclass_crew = env_flag("QCYBER_USE_MULTICLASS_CREW", default=crew_default)
+        use_incident_response_crew = env_flag(
+            "QCYBER_USE_INCIDENT_RESPONSE_CREW",
+            default=crew_default,
+        )
+        use_remediation_crew = env_flag("QCYBER_USE_REMEDIATION_CREW", default=crew_default)
         print(
             f"[{req_id}] [BIN] Iniciando fluxo com {len(samples_for_detection)} amostras | "
             f"binary_crew={use_binary_crew} multiclass_crew={use_multiclass_crew} "

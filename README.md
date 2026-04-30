@@ -107,6 +107,7 @@ Notas:
 - `QCYBER_CREW_VERBOSE=0` reduz ruido no backend.
 - `QCYBER_ALLOW_CREW_FALLBACK=1` mantem o pipeline rodando com o modelo probabilistico quando algum LLM local falhar.
 - `QCYBER_USE_*_CREW=0` impede que uma Crew especifica seja iniciada.
+- Em `QCYBER_ENV=TEST`, as Crews ficam desligadas por padrao, a menos que voce defina `QCYBER_USE_*_CREW=1`.
 - `QCYBER_SHAP_MODE=fast` reduz custo de explicabilidade.
 
 ## Modelos Ollama
@@ -543,6 +544,14 @@ crewai run
 ```
 
 Nesse modo, o pipeline ainda executa a deteccao binaria, o filtro de amostras suspeitas, a etapa multiclasse e a politica de rejeicao por probabilidades. O que fica desligado e apenas a camada LLM/CrewAI.
+
+Em ambiente de teste, basta usar:
+
+```bash
+QCYBER_ENV=TEST uv run run_crew
+```
+
+Se alguma variavel `QCYBER_USE_*_CREW=1` estiver no `.env`, ela sobrescreve esse default e liga a Crew novamente.
 
 Se o terminal nao mostrar uma linha começando com `Workflow config:`, a execucao ainda esta usando uma versao antiga do `src/qml/main.py` ou um ambiente `.venv` desatualizado. Rode novamente `uv sync` e prefira testar com `uv run run_crew` a partir da raiz do projeto.
 
