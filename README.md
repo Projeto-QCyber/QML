@@ -428,8 +428,12 @@ Arquivos comuns:
 - `detection_result.json`
 - `preliminary_prediction.json`
 - `final_prediction.json`
+- `incident_response_plans.json`
+- `remediation_suggestions.json`
 - `incident_response_plan.md`
 - `remediation_chat.json`
+
+`incident_response_plan.md` e `remediation_chat.json` sao artefatos agregados do batch inteiro. Quando ha multiplos tipos de ataque aceitos, eles devem conter todos os tipos, nao apenas o ultimo tipo processado.
 
 Esses arquivos sao auxiliares. A fonte principal do resultado operacional deve ser o JSON retornado pelo terminal ou pela API.
 

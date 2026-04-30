@@ -27,7 +27,6 @@ class RemediationChatCrew:
         return Task(
             config=self.tasks_config["remediation_chat"],
             agent=self.remediation_operator_assistant(),
-            output_file="src/qml/output/remediation_chat.json",
         )
 
     @crew

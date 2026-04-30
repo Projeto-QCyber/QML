@@ -31,7 +31,6 @@ class IncidentResponseCrew:
         return Task(
             config=self.tasks_config['generate_response_plan'],
             agent=self.incident_responder(),
-            output_file='src/qml/output/incident_response_plan.md',
         )
 
     @crew

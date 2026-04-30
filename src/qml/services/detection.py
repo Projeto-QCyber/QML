@@ -5,6 +5,7 @@ import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from qml.tools.model import RFModel
@@ -27,6 +28,8 @@ ATTACK_LABELS: dict[int, str] = {
     13: "XSS",
     99: "Normal",
 }
+
+OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 
 
 @dataclass(slots=True)
@@ -642,6 +645,7 @@ class BatchDetectionService:
                 "suggestion_count": len(remediation_suggestions),
             }
         )
+        _write_response_artifacts(result)
         return result
 
 
@@ -962,6 +966,56 @@ def _combine_attack_response_plans(plans: list[dict[str, Any]]) -> str:
             f"## {item.get('attack_type_label')} (batch_index: {indices})\n\n{plan}"
         )
     return "\n\n".join(sections)
+
+
+def _write_response_artifacts(result: BatchDetectionResult) -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    incident_payload = {
+        "status": result.incident_response_status,
+        "plans": result.attack_response_plans,
+        "combined_plan": result.incident_response_plan,
+    }
+    remediation_payload = {
+        "status": result.remediation_suggestion_status,
+        "suggestions": result.attack_remediation_suggestions,
+    }
+
+    _write_json_artifact("incident_response_plans.json", incident_payload)
+    _write_json_artifact("remediation_suggestions.json", remediation_payload)
+
+    # Legacy filenames now contain the aggregate batch-level artifact, not the last attack only.
+    (OUTPUT_DIR / "incident_response_plan.md").write_text(
+        result.incident_response_plan or _empty_incident_plan_markdown(result.attack_response_plans),
+        encoding="utf-8",
+    )
+    _write_json_artifact("remediation_chat.json", remediation_payload)
+
+
+def _write_json_artifact(filename: str, payload: dict[str, Any]) -> None:
+    with (OUTPUT_DIR / filename).open("w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+
+
+def _empty_incident_plan_markdown(plans: list[dict[str, Any]]) -> str:
+    if not plans:
+        return "# Planos de resposta a incidente\n\nNenhum ataque aceito para resposta.\n"
+
+    sections = ["# Planos de resposta a incidente"]
+    for item in plans:
+        indices = ", ".join(str(index) for index in item.get("batch_indices", []))
+        sections.append(
+            "\n".join(
+                [
+                    f"## {item.get('attack_type_label')} (batch_index: {indices})",
+                    "",
+                    f"Status: {item.get('status')}",
+                    "",
+                    "Nenhum plano textual foi gerado nesta execução.",
+                ]
+            )
+        )
+    return "\n\n".join(sections) + "\n"
 
 
 def _multiclass_trace_status(
