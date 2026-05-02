@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: qcyber_flask_api
+    image: qcyber-qml-api:v0.1
+    container_name: qcyber_prod_flask_api
     restart: always
     env_file:
       - .env
@@ -16,7 +17,7 @@ services:
   ollama:
     profiles: ["ollama"]
     image: ollama/ollama:0.22.1
-    container_name: qcyber_ollama
+    container_name: qcyber_prod_ollama
     volumes:
       - ./ollama:/root/.ollama
       - ./entrypoint.ollama.sh:/entrypoint.ollama.sh
