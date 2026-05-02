@@ -3,20 +3,23 @@
 Standalone inference script for saved EdgeIIoT QML models.
 
 Design constraints:
-- This file must be copyable into another repo and work with just a saved `.pt` model file.
-- No imports from this codebase (only third-party deps: numpy/pandas/torch/sklearn/pennylane).
+- This file must be copyable into another repo and work with a saved `.npz/.json` model.
+- Legacy `.pt` files are still supported when PyTorch is installed.
+- No imports from this codebase (only third-party deps: numpy/pandas/sklearn/pennylane; torch only for `.pt`).
 - The saved artifact must not rely on pickled sklearn objects; we reconstruct from *_state.
 
 Usage:
-  uv run python scripts/predict.py --model models/foo.pt --csv data.csv --out preds.csv --decision
-  uv run python scripts/predict.py --model models/foo.pt --point "0.1,0.2,..." --decision
+  uv run python scripts/predict.py --model models/foo.npz --csv data.csv --out preds.csv --decision
+  uv run python scripts/predict.py --model models/foo.npz --point "0.1,0.2,..." --decision
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -30,7 +33,7 @@ import pandas as pd
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Load a saved QML model and run predictions.")
-    p.add_argument("--model", required=True, help="Path to saved .pt model file")
+    p.add_argument("--model", required=True, help="Path to saved .pt or .npz model file")
     p.add_argument("--device", default=None, help="Optional PennyLane device override (e.g. lightning.qubit)")
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--csv", help="Path to CSV with header; feature columns are auto-selected")
@@ -419,10 +422,17 @@ class LoadedQuantumClassifier:
         return (pred_signed > 0).astype(np.int32)
 
 
-def load_model_pt(path: str, device_override: Optional[str] = None) -> LoadedQuantumClassifier:
-    import torch
+def _as_numpy(value: Any) -> np.ndarray:
+    if hasattr(value, "detach") and hasattr(value, "cpu"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value)
 
-    state = torch.load(path, map_location="cpu", weights_only=False)
+
+def _as_float(value: Any) -> float:
+    return float(_as_numpy(value).reshape(()))
+
+
+def _build_classifier_from_state(state: Dict[str, Any], device_override: Optional[str] = None) -> LoadedQuantumClassifier:
     if not isinstance(state, dict):
         raise ValueError("Invalid model file: expected a dict-like state")
     ver = int(state.get("version") or 0)
@@ -455,11 +465,11 @@ def load_model_pt(path: str, device_override: Optional[str] = None) -> LoadedQua
         if k not in state:
             raise ValueError(f"Saved model is missing required key '{k}'.")
 
-    weights = state["weights"].detach().cpu().numpy()
-    w_ro = state["w_ro"].detach().cpu().numpy().astype(np.float64, copy=False)
-    bias = float(state["bias"].detach().cpu().numpy().reshape(()))
-    alpha = float(state["alpha"].detach().cpu().numpy().reshape(()))
-    score_sign = float(state["score_sign"].detach().cpu().numpy().reshape(()))
+    weights = _as_numpy(state["weights"])
+    w_ro = _as_numpy(state["w_ro"]).astype(np.float64, copy=False)
+    bias = _as_float(state["bias"])
+    alpha = _as_float(state["alpha"])
+    score_sign = _as_float(state["score_sign"])
 
     if "features" not in state or not isinstance(state["features"], (list, tuple)) or not state["features"]:
         raise ValueError("Saved model is missing non-empty 'features' list.")
@@ -515,9 +525,43 @@ def load_model_pt(path: str, device_override: Optional[str] = None) -> LoadedQua
     )
 
 
+def load_model_pt(path: str, device_override: Optional[str] = None) -> LoadedQuantumClassifier:
+    import torch
+
+    state = torch.load(path, map_location="cpu", weights_only=False)
+    return _build_classifier_from_state(state, device_override=device_override)
+
+
+def load_model_npz(path: str, device_override: Optional[str] = None) -> LoadedQuantumClassifier:
+    npz_path = Path(path)
+    metadata_path = npz_path.with_suffix(".json")
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"Quantum model metadata file not found: '{metadata_path}'.")
+
+    with metadata_path.open("r", encoding="utf-8") as f:
+        state = json.load(f)
+
+    with np.load(npz_path, allow_pickle=False) as arrays:
+        for key in ["weights", "w_ro", "bias", "alpha", "score_sign"]:
+            if key not in arrays:
+                raise ValueError(f"Quantum npz model is missing required array '{key}'.")
+            state[key] = arrays[key]
+
+    return _build_classifier_from_state(state, device_override=device_override)
+
+
+def load_quantum_model(path: str, device_override: Optional[str] = None) -> LoadedQuantumClassifier:
+    suffix = Path(path).suffix.lower()
+    if suffix == ".pt":
+        return load_model_pt(path, device_override=device_override)
+    if suffix == ".npz":
+        return load_model_npz(path, device_override=device_override)
+    raise ValueError(f"Unsupported quantum model extension '{suffix}'. Use .npz or .pt.")
+
+
 def main() -> None:
     args = _parse_args()
-    clf = load_model_pt(args.model, device_override=args.device)
+    clf = load_quantum_model(args.model, device_override=args.device)
 
     if args.no_preprocess:
         clf.scaler = None

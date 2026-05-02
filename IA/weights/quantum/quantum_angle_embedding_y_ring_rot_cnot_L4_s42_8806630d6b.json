@@ -1,0 +1,104 @@
+{
+  "version": 4,
+  "framework": "pennylane",
+  "created_at": "20260210-082125-827022-2221911",
+  "dataset": "mergido_preprocessado",
+  "device": "lightning.qubit",
+  "num_qubits": 8,
+  "encoder": "angle_embedding_y",
+  "encoder_opts": {
+    "angle_scale": 0.5,
+    "reupload": true
+  },
+  "ansatz": "ring_rot_cnot",
+  "layers": 4,
+  "measurement": {
+    "name": "mean_z",
+    "wires": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "features": [
+    "PC_1",
+    "PC_2",
+    "PC_3",
+    "PC_4",
+    "PC_5",
+    "PC_6",
+    "PC_7",
+    "PC_8"
+  ],
+  "label": "Attack_label",
+  "coerce_state": {
+    "PC_1": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_2": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_3": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_4": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_5": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_6": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_7": {
+      "mode": "numeric",
+      "median": null
+    },
+    "PC_8": {
+      "mode": "numeric",
+      "median": null
+    }
+  },
+  "requires_preprocess": false,
+  "scaler_state": null,
+  "quantile_state": null,
+  "pls_state": null,
+  "pca_state": null,
+  "compiled_input_scale": 0.5,
+  "compiled_input_shift": 0.0,
+  "train": {
+    "lr": 0.01,
+    "batch": 64,
+    "epochs": 2
+  },
+  "metrics": {
+    "accuracy": 0.67315,
+    "precision": 0.994289637095516,
+    "recall": 0.6212274818685175,
+    "f1": 0.7646840014878988,
+    "balanced_accuracy": 0.800106161696776,
+    "auc": 0.9595450168473472,
+    "val_balanced_accuracy": 0.800303582201974,
+    "val_f1": 0.7643598823600024,
+    "val_auc": 0.9612111891805836,
+    "val_objective_name": "prec_at_bacc",
+    "val_prec_at_bacc": 0.9945333853963295,
+    "threshold": 0.012171966955065727,
+    "best_epoch": 2
+  },
+  "threshold": 0.012171966955065727,
+  "artifact_format": "qcyber_quantum_npz",
+  "array_file": "quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.npz",
+  "source_pt_file": "quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.pt"
+}

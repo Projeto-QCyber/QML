@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
-DEFAULT_MODEL_PATH = ROOT_DIR / "IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.pt"
+DEFAULT_MODEL_STEM = ROOT_DIR / "IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b"
+DEFAULT_MODEL_PATH = DEFAULT_MODEL_STEM.with_suffix(".npz")
 PREDICT_SCRIPT_PATH = ROOT_DIR / "IA/scripts/predict.py"
 
 
@@ -23,7 +24,7 @@ class QuantumModelInput(BaseModel):
 class QuantumModel(BaseTool):
     name: str = "quantum_model"
     description: str = """
-        Ferramenta de classificação binária com modelo quântico (.pt).
+        Ferramenta de classificação binária com modelo quântico (.npz/.json ou .pt legado).
         Recebe uma lista de amostras (dicionários) e retorna predições 0/1.
     """
     args_schema: Type[BaseModel] = QuantumModelInput
@@ -38,8 +39,24 @@ class QuantumModel(BaseTool):
         if model_file.exists():
             return model_file
 
-        # Temporary resilience for current codebase: auto-pick a single .pt model when default path moved.
+        json_sidecar = model_file.with_suffix(".json")
+        if model_file.suffix.lower() == ".npz" and json_sidecar.exists():
+            return model_file
+
+        legacy_pt = model_file.with_suffix(".pt")
+        if legacy_pt.exists():
+            return legacy_pt
+
         quantum_dir = ROOT_DIR / "IA/weights/quantum"
+        candidates = sorted(quantum_dir.glob("*.npz"))
+        if len(candidates) == 1:
+            return candidates[0]
+        if len(candidates) > 1:
+            raise FileNotFoundError(
+                f"Configured model path not found: '{model_file}'. Multiple .npz candidates found; "
+                f"pass model_path explicitly. Candidates: {[str(p) for p in candidates]}"
+            )
+
         candidates = sorted(quantum_dir.glob("*.pt"))
         if len(candidates) == 1:
             return candidates[0]
@@ -76,11 +93,11 @@ class QuantumModel(BaseTool):
         model_file = self._resolve_model_path()
 
         predict_module = self._load_predict_module()
-        load_model_pt = getattr(predict_module, "load_model_pt", None)
-        if load_model_pt is None:
-            raise RuntimeError("predict.py does not expose 'load_model_pt'.")
+        load_quantum_model = getattr(predict_module, "load_quantum_model", None)
+        if load_quantum_model is None:
+            raise RuntimeError("predict.py does not expose 'load_quantum_model'.")
 
-        self._classifier = load_model_pt(str(model_file), device_override=self.device)
+        self._classifier = load_quantum_model(str(model_file), device_override=self.device)
         self._feature_names = list(getattr(self._classifier, "features", []) or [])
 
     def _run(self, samples: List[Dict[str, Any]]) -> List[int]:
