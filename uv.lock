@@ -3562,6 +3562,10 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "scikit-learn" },
     { name = "shap" },
+]
+
+[package.optional-dependencies]
+quantum-convert = [
     { name = "torch" },
 ]
 
@@ -3594,8 +3598,9 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "scikit-learn", specifier = "==1.8.0" },
     { name = "shap", specifier = ">=0.48.0" },
-    { name = "torch", specifier = ">=2.0.0" },
+    { name = "torch", marker = "extra == 'quantum-convert'", specifier = ">=2.0.0" },
 ]
+provides-extras = ["quantum-convert"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "jupyterlab", specifier = ">=4.4.7" }]

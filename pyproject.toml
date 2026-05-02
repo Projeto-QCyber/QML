@@ -27,6 +27,10 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "scikit-learn==1.8.0",
     "shap>=0.48.0",
+]
+
+[project.optional-dependencies]
+quantum-convert = [
     "torch>=2.0.0",
 ]
 

@@ -24,8 +24,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--row", type=int, default=0, help="Row index to inject into the tool.")
     p.add_argument(
         "--model-path",
-        default=str(ROOT_DIR / "IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.pt"),
-        help="Path to .pt quantum model.",
+        default=str(ROOT_DIR / "IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.npz"),
+        help="Path to .npz/.json quantum model, or legacy .pt model.",
     )
     p.add_argument("--device", default=None, help="Optional PennyLane device override.")
     return p.parse_args()

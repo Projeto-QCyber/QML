@@ -54,6 +54,15 @@ Sincronize o ambiente:
 uv sync
 ```
 
+O modelo quantico usado em producao fica em formato leve `.npz/.json`, entao PyTorch nao e instalado no ambiente principal. Se voce receber um checkpoint legado `.pt`, instale o extra de conversao apenas na maquina de desenvolvimento:
+
+```bash
+uv sync --extra quantum-convert
+uv run python IA/scripts/convert_quantum_pt_to_npz.py IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.pt
+```
+
+Depois da conversao, a ferramenta `quantum_model` carrega `IA/weights/quantum/quantum_angle_embedding_y_ring_rot_cnot_L4_s42_8806630d6b.npz` junto do `.json`, sem depender de PyTorch.
+
 Em Linux, se houver erro com dependencias MySQL:
 
 ```bash
