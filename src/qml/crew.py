@@ -7,6 +7,7 @@ from qml.tools.model import RFModel
 from qml.schemas.agents_roles import Specialist
 from qml.tools.quantum_model import QuantumModel
 from qml.utils.api_call_models import _llm_default, _llm_leader
+from qml.utils.runtime import crew_verbose
 
 
 @CrewBase
@@ -54,7 +55,7 @@ class CyberPredict:
             config=self.agents_config['cybersecurity_analyst_1'],
             tools=self._binary_tools(),
             llm=_llm_default(),
-            verbose=True
+            verbose=crew_verbose(),
         )
 
     @agent
@@ -63,7 +64,7 @@ class CyberPredict:
             config=self.agents_config['cybersecurity_analyst_2'],
             tools=self._binary_tools(),
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
         )
 
     @agent
@@ -71,7 +72,7 @@ class CyberPredict:
         return Agent(
             config=self.agents_config['cybersecurity_specialist'],
             llm=_llm_leader(),
-            verbose=True
+            verbose=crew_verbose(),
         )
 
     @task
@@ -93,7 +94,7 @@ class CyberPredict:
         return Task(
             config=self.tasks_config['validate_results'],
             agent=self.cybersecurity_specialist(),
-            output_file='src/qml/output/preliminary_prediction.txt',
+            output_file='src/qml/output/preliminary_prediction.json',
         )
 
     @crew
@@ -109,5 +110,6 @@ class CyberPredict:
             agents=self.agents,
             tasks=[task1, task2, task3],
             process=Process.sequential,
-            verbose=True
+            verbose=crew_verbose(),
+            max_iter=2,
         )

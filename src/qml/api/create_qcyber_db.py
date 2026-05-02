@@ -55,9 +55,22 @@ def recreate_database():
                            ) ENGINE=InnoDB;
                            """)
             label_map = {
-                'Backdoor': 0, 'DDoS_HTTP': 1, 'DDoS_ICMP': 2, 'DDoS_TCP': 3, 'DDoS_UDP': 4,
-                'Fingerprinting': 5, 'MITM': 6, 'Password': 7, 'Port_Scanning': 8, 'Ransomware': 9,
-                'SQL_injection': 10, 'Uploading': 11, 'Vulnerability_scanner': 12, 'XSS': 13, 'Outras': 14, 'Normal': 99
+                'Backdoor': 0,
+                'DDoS_HTTP': 1,
+                'DDoS_ICMP': 2,
+                'DDoS_TCP': 3,
+                'DDoS_UDP': 4,
+                'Fingerprinting': 5,
+                'MITM': 6,
+                'Password': 7,
+                'Port_Scanning': 8,
+                'Ransomware': 9,
+                'SQL_injection': 10,
+                'Uploading': 11,
+                'Vulnerability_scanner': 12,
+                'XSS': 13,
+                'Others': 14,
+                'Normal': 99,
             }
             for nome, id_ataque in label_map.items():
                 cursor.execute("INSERT INTO enum_tipo_ataque (id, nome, descricao) VALUES (%s, %s, %s)",
@@ -318,6 +331,7 @@ def ensure_bootstrap():
     """
     load_dotenv()
     db_name = os.getenv('MYSQL_DB', 'qcyber_db')
+    app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").strip().lower()
     try:
         _host = os.getenv('MYSQL_HOST') or 'mysql'
         _user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
@@ -347,9 +361,16 @@ def ensure_bootstrap():
                 critical_present = cursor.fetchone()[0]
 
                 if critical_present < 4 and got_lock:
+                    if app_env in {"production", "prod"}:
+                        print("❌ Estrutura crítica ausente e APP_ENV=production. Recusando recriar banco automaticamente.")
+                        cursor.execute("SELECT RELEASE_LOCK(%s)", ("qcyber_bootstrap_lock",))
+                        got_lock = False
+                        conn.close()
+                        return False
                     print("⚠️ Estrutura crítica ausente. Recriando banco de dados (ambiente de dev/test)...")
                     # Libera lock antes de recriar para evitar reentrância após drop
                     cursor.execute("SELECT RELEASE_LOCK(%s)", ("qcyber_bootstrap_lock",))
+                    got_lock = False
                     conn.close()
                     return recreate_database()
 
@@ -364,6 +385,18 @@ def ensure_bootstrap():
                 if not pred_col_present and got_lock:
                     print("⚠️ Coluna 'predicao' ausente em 'deteccoes'. Aplicando patch de schema...")
                     cursor.execute("ALTER TABLE deteccoes ADD COLUMN predicao INT NOT NULL DEFAULT 1 AFTER dispositivo_id")
+
+                if got_lock:
+                    cursor.execute(
+                        "INSERT IGNORE INTO enum_tipo_ataque (id, nome, descricao) "
+                        "VALUES (%s, %s, %s)",
+                        (14, "Others", "Detecção do tipo Others."),
+                    )
+                    cursor.execute(
+                        "INSERT IGNORE INTO enum_tipo_ataque (id, nome, descricao) "
+                        "VALUES (%s, %s, %s)",
+                        (99, "Normal", "Detecção do tipo Normal."),
+                    )
 
                 conn.commit()
             finally:

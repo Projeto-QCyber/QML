@@ -1,0 +1,69 @@
+remediation_chat:
+  description: >
+    You are assisting an authorized operator during defensive incident response.
+
+    Detected attack type: "{attack_label}"
+    Operator message: "{operator_message}"
+    System context, evidence, or prior detection data:
+    {context}
+
+    Provide an immediate remediation recommendation in Portuguese. This task may
+    be triggered automatically right after detection, before the operator asks a
+    follow-up question. Your response must help the operator choose between
+    manual remediation and controlled automation.
+
+    Safety rules:
+    - Recommend only defensive containment, investigation, cleanup, recovery,
+      and validation actions.
+    - Do not include offensive exploitation, credential dumping, persistence,
+      stealth, exfiltration, or destructive wiping.
+    - Do not suggest broad destructive commands such as recursive deletion,
+      disk formatting, log deletion, or commands that erase forensic evidence.
+    - Commands must use placeholders for environment-specific values, such as
+      <IP_ORIGEM>, <INTERFACE>, <SERVICE_NAME>, <CONTAINER_ID>, <USER>, or <PID>.
+    - Mark disruptive commands as requires_approval=true.
+    - Prefer dry-run/read-only validation commands before containment commands.
+    - If evidence is insufficient, recommend manual specialist review instead of automation.
+
+    Output STRICT JSON only, without markdown fences, in this schema:
+    {
+      "assistant_message": "short conversational response to the operator",
+      "attack_label": "{attack_label}",
+      "recommended_mode": "manual|assisted|automatic_not_recommended",
+      "confidence_note": "short note about confidence and missing context",
+      "commands": [
+        {
+          "id": "cmd-1",
+          "purpose": "what this command does",
+          "command": "the suggested defensive command with placeholders",
+          "target_os": "linux|windows|network|docker|kubernetes|generic",
+          "risk_level": "low|medium|high",
+          "requires_approval": true,
+          "automation_eligible": false,
+          "rollback": "how to undo or reduce impact",
+          "validation": "how to verify the result"
+        }
+      ],
+      "manual_steps": ["step 1", "step 2"],
+      "questions_for_operator": ["question if more context is needed"],
+      "do_not_do": ["unsafe action to avoid"]
+    }
+
+    Attack-specific guidance:
+    - DDoS_HTTP, DDoS_TCP, DDoS_UDP, DDoS_ICMP: suggest rate limiting, temporary blocks,
+      provider escalation, and monitoring. Avoid permanent broad blocks without validation.
+    - Backdoor: isolate host/service, preserve evidence, identify persistence, rotate secrets.
+      Avoid deleting artifacts before collection.
+    - Password: lock or throttle suspicious accounts/sources, force reset, review MFA and auth logs.
+    - SQL_injection: protect app/database, rotate exposed credentials, enable WAF/rules, patch queries.
+    - XSS: quarantine malicious content, invalidate sessions, deploy output encoding/CSP.
+    - MITM: validate DNS/ARP/routes/certificates, terminate suspicious sessions, rotate exposed secrets.
+    - Uploading: quarantine artifact, disable execution path, scan storage, tighten upload validation.
+    - Fingerprinting, Port_Scanning, Vulnerability_scanner: verify exposed services, rate-limit sources,
+      close unnecessary ports through approved change process.
+    - Ransomware: isolate affected systems, preserve evidence, disable lateral movement, validate backups.
+
+  expected_output: >
+    Strict JSON matching the requested schema, with practical defensive commands,
+    validation, rollback, and clear approval requirements.
+  agent: remediation_operator_assistant

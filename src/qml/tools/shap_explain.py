@@ -12,8 +12,28 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from qml.tools.model import MODEL_TO_APP_MULTICLASS_ID
+
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+APP_ATTACK_LABELS = {
+    0: "Backdoor",
+    1: "DDoS_HTTP",
+    2: "DDoS_ICMP",
+    3: "DDoS_TCP",
+    4: "DDoS_UDP",
+    5: "Fingerprinting",
+    6: "MITM",
+    7: "Password",
+    8: "Port_Scanning",
+    9: "Ransomware",
+    10: "SQL_injection",
+    11: "Uploading",
+    12: "Vulnerability_scanner",
+    13: "XSS",
+    14: "Others",
+    99: "Normal",
+}
 
 
 def load_model(model_path: str | Path) -> object:
@@ -299,17 +319,30 @@ class ExplainTop2SHAP:
             return explicit_path
 
         env_key = "QML_RF_MODEL_MULT_PATH" if self.classification == "multiclass" else "QML_RF_MODEL_BIN_PATH"
-        env_path = _candidate(os.getenv(env_key))
+        qcyber_env_key = (
+            "QCYBER_MULTICLASS_MODEL_PATH"
+            if self.classification == "multiclass"
+            else "QCYBER_BINARY_MODEL_PATH"
+        )
+        env_path = _candidate(os.getenv(qcyber_env_key)) or _candidate(os.getenv(env_key))
         if env_path:
             return env_path
 
         default_path = (
+            ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
+            if self.classification == "multiclass"
+            else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+        )
+        if default_path.exists():
+            return default_path
+
+        legacy_path = (
             ROOT_DIR / "IA/weights/traditional/random_forest_model_mult_q.joblib"
             if self.classification == "multiclass"
             else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin_q.joblib"
         )
-        if default_path.exists():
-            return default_path
+        if legacy_path.exists():
+            return legacy_path
 
         raise FileNotFoundError(
             f"Could not locate SHAP model for classification='{self.classification}'. "
@@ -374,10 +407,11 @@ class ExplainTop2SHAP:
             prediction = self.model.predict(df)[0]
         except Exception:
             prediction = None
+        prediction_text = _format_prediction_label(prediction, self.classification)
 
         header = (
             f"Top {len(order)} features influencing the {self.classification} prediction"
-            + (f" (predicted class: {prediction})" if prediction is not None else "")
+            + (f" (predicted class: {prediction_text})" if prediction_text else "")
             + ":"
         )
 
@@ -400,3 +434,19 @@ class ExplainTop2SHAP:
         df = self._prepare_dataframe(samples)
         explanation = self._compute_explanation(df)
         return self._summarize(explanation, df)
+
+
+def _format_prediction_label(prediction: object, classification: str) -> str:
+    if prediction is None:
+        return ""
+    try:
+        prediction_id = int(prediction)
+    except Exception:
+        return str(prediction)
+
+    if classification != "multiclass":
+        return str(prediction_id)
+
+    app_id = MODEL_TO_APP_MULTICLASS_ID.get(prediction_id, prediction_id)
+    label = APP_ATTACK_LABELS.get(app_id, f"Classe_{app_id}")
+    return f"{app_id} ({label})"

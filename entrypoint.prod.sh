@@ -16,16 +16,4 @@ except Exception as e:
     print(f'[ENTRYPOINT] Falha no bootstrap: {e}')
 PY
 
-# Executa bootstrap do banco antes de iniciar a API (única vez no boot)
-python - <<'PY'
-import sys
-print('[ENTRYPOINT] Executando bootstrap inicial do banco...')
-try:
-    from qml.api.create_qcyber_db import ensure_bootstrap
-    ok = ensure_bootstrap()
-    print(f'[ENTRYPOINT] Bootstrap concluído: {ok}')
-except Exception as e:
-    print(f'[ENTRYPOINT] Falha no bootstrap: {e}')
-PY
-
 python -m gunicorn --timeout 1500 --bind 0.0.0.0:$FLASK_API_PORT --workers 4 qml.api.main_api:app

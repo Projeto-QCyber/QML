@@ -13,7 +13,8 @@ label_map = {
     'Uploading': 11,
     'Vulnerability_scanner': 12,
     'XSS': 13,
-    'Outras': 14
+    'Others': 14,
+    'Normal': 99,
 }
 
 def decode_type_attack(array_list):

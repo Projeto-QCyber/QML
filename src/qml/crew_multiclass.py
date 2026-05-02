@@ -9,13 +9,32 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from qml.schemas.agents_roles import Specialist, LeaderDecision  # specialist votes and leader decision
 from qml.tools.model import RFModel              # your tool (RandomForest model wrapper)
 from qml.utils.api_call_models import _llm_default, _llm_leader
+from qml.utils.runtime import crew_verbose
 
-import shap
-import time
-import pandas as pd
-import numpy as np
+
+CLASS_CREW_METHODS = {
+    0: ("cybersecurity_specialist_backdoor", "analyze_and_vote_backdoor"),
+    1: ("cybersecurity_specialist_ddos_http", "analyze_and_vote_ddos_http"),
+    2: ("cybersecurity_specialist_ddos_icmp", "analyze_and_vote_ddos_icmp"),
+    3: ("cybersecurity_specialist_ddos_tcp", "analyze_and_vote_ddos_tcp"),
+    4: ("cybersecurity_specialist_ddos_udp", "analyze_and_vote_ddos_udp"),
+    5: ("cybersecurity_specialist_fingerprinting", "analyze_and_vote_fingerprinting"),
+    6: ("cybersecurity_specialist_mitm", "analyze_and_vote_mitm"),
+    7: ("cybersecurity_specialist_password", "analyze_and_vote_password"),
+    8: ("cybersecurity_specialist_port_scanning", "analyze_and_vote_port_scanning"),
+    9: ("cybersecurity_specialist_ransomware", "analyze_and_vote_ransomware"),
+    10: ("cybersecurity_specialist_sql_injection", "analyze_and_vote_sql_injection"),
+    11: ("cybersecurity_specialist_uploading", "analyze_and_vote_uploading"),
+    12: ("cybersecurity_specialist_vulnerability_scanner", "analyze_and_vote_vulnerability_scanner"),
+    13: ("cybersecurity_specialist_xss", "analyze_and_vote_xss"),
+    14: ("cybersecurity_specialist_outras", "analyze_and_vote_outras"),
+}
+
 
 def run_shap_explanation(model, sample_df: pd.DataFrame):
+    import shap
+    import time
+
     start_time = time.time()
     print("\n[SHAP] Starting SHAP analysis for the sample...")
 
@@ -86,7 +105,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_mitm'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -96,7 +115,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_fingerprinting'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -106,7 +125,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ransomware'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -116,7 +135,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_uploading'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -126,7 +145,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_sql_injection'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -136,7 +155,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_http'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -146,7 +165,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_tcp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -156,7 +175,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_password'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -166,7 +185,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_port_scanning'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -176,7 +195,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_vulnerability_scanner'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -186,7 +205,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_backdoor'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -196,7 +215,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_xss'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -206,7 +225,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_udp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -216,7 +235,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_ddos_icmp'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
@@ -238,7 +257,7 @@ class CyberPredictMult:
         return Agent(
             config=self.agents_config['cybersecurity_team_leader'],
             llm=_llm_leader(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=True,
             max_iter=1             
         )
@@ -390,7 +409,49 @@ class CyberPredictMult:
                 "If uncertain, return {\"predictions\":[99], \"report\":\"Normal\"}."
             ),
             output_pydantic=LeaderDecision,
-            output_file='src/qml/output/final_prediction.txt',
+            output_file='src/qml/output/final_prediction.json',
+        )
+
+    def final_evaluation_task_for_context(self, context_tasks: list[Task]) -> Task:
+        return Task(
+            config=self.tasks_config['final_evaluation_task'],
+            agent=self.cybersecurity_team_leader(),
+            context=context_tasks,
+            expected_output=(
+                "Return STRICT JSON only, exactly in this schema: "
+                "{\"predictions\":[<int>], \"report\":\"<short explanation>\"}. "
+                "Rules: Do NOT include any text before/after the JSON. Do NOT use code fences. "
+                "Do NOT include <think> hidden thoughts or LaTeX (e.g., \\boxed). "
+                "Use only integers for predictions (single element list), e.g., [10]. "
+                "If uncertain, return {\"predictions\":[99], \"report\":\"Normal\"}."
+            ),
+            output_pydantic=LeaderDecision,
+            output_file='src/qml/output/final_prediction.json',
+        )
+
+    def crew_for_class_ids(self, class_ids: list[int]) -> Crew:
+        selected_ids = []
+        for class_id in class_ids:
+            normalized_id = int(class_id)
+            if normalized_id in CLASS_CREW_METHODS and normalized_id not in selected_ids:
+                selected_ids.append(normalized_id)
+
+        if not selected_ids:
+            selected_ids = list(CLASS_CREW_METHODS)
+
+        selected_agents = []
+        selected_tasks = []
+        for class_id in selected_ids:
+            agent_method_name, task_method_name = CLASS_CREW_METHODS[class_id]
+            selected_agents.append(getattr(self, agent_method_name)())
+            selected_tasks.append(getattr(self, task_method_name)())
+
+        final_task = self.final_evaluation_task_for_context(selected_tasks)
+        return Crew(
+            agents=[*selected_agents, self.cybersecurity_team_leader()],
+            tasks=[*selected_tasks, final_task],
+            process=Process.sequential,
+            verbose=crew_verbose(),
         )
 
     # -------------------------------------------------------------------------
@@ -426,5 +487,5 @@ class CyberPredictMult:
             tasks=self.tasks,
             process=Process.hierarchical,             # leader-managed deliberation
             manager_agent=self.cybersecurity_team_leader(),  # explicit manager
-            verbose=True
+            verbose=crew_verbose()
         )

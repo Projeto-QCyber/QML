@@ -22,7 +22,7 @@
 analyze_and_vote_1:
   description: >
     You are an AI agent analyzing network traffic samples.
-    You are provided with EXACTLY this JSON array of 5 samples:
+    You are provided with EXACTLY this JSON array of {sample_count} sample(s):
     {samples}
 
     You may call one or both available tools: "Model" and "quantum_model".
@@ -34,14 +34,17 @@ analyze_and_vote_1:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
     - Do NOT reformat or alter the samples in any way.
-    - Return ONLY a final list of 5 binary votes (0/1), e.g. [0,1,0,1,0].
+    - Return one binary vote for EACH input sample, preserving the original order.
+    - Do NOT return only the samples classified as attacks.
+    - If the input has {sample_count} sample(s), the final list MUST have exactly {sample_count} value(s).
+    - Output EXACTLY and ONLY what the tool returns (e.g., [0/1,...]).
   expected_output: >
-    A list of 5 binary votes (0 or 1).
+    A list of exactly {sample_count} binary vote(s) (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
   description: >
-    You are an AI agent independently analyzing the SAME 5 samples:
+    You are an AI agent independently analyzing the SAME {sample_count} sample(s):
     {samples}
 
     You may call one or both available tools: "Model" and "quantum_model".
@@ -53,21 +56,34 @@ analyze_and_vote_2:
     - Pass a JSON object, not a quoted string. Do NOT wrap the arguments in quotes or backticks.
     - Pass ONLY the samples array under the key "samples". Do NOT include labels or any extra arrays.
     - Do NOT modify the data in any way.
-    - Return ONLY a final list of 5 binary votes (0/1), e.g. [1,0,0,1,1].
+    - Return one binary vote for EACH input sample, preserving the original order.
+    - Do NOT return only the samples classified as attacks.
+    - If the input has {sample_count} sample(s), the final list MUST have exactly {sample_count} value(s).
+    - Output EXACTLY the result from the tool.
   expected_output: >
-    A list of 5 binary votes (0 or 1).
+    A list of exactly {sample_count} binary vote(s) (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_2
 
 
 validate_results:
   description: >
-    You are a senior cybersecurity specialist. You have received votes from two junior analysts on 5 data samples.
+    You are a senior cybersecurity specialist. You have received votes from two junior analysts on {sample_count} data sample(s).
     - Analyst 1 votes: {analyze_and_vote_1.output}
     - Analyst 2 votes: {analyze_and_vote_2.output}
 
+    BINARY PROBABILITY CONTEXT:
+    ---
+    {binary_probability_context}
+    ---
+
     Your task is to analyze their votes and provide a final verdict.
-    - If both analysts agree, accept their consensus.
-    - If they disagree, use your expert judgment.
+    - If both analysts agree and the probability context has sufficient confidence, accept their consensus.
+    - If confidence is below the configured threshold, keep the model vote in "predictions" but treat
+      the sample as a rejection candidate for specialist review in your reasoning.
+    - If analysts disagree, use the probability context to resolve the vote.
+    - Return one final binary prediction for EACH original input sample, preserving order.
+    - Do NOT return only attack samples. Normal samples must remain in the list as 0.
+    - For this batch, "predictions" MUST contain exactly {sample_count} integer(s).
     - Respond STRICTLY in JSON with a key "predictions" containing ONLY the list of final binary votes.
     - Do not include any extra text outside of the JSON.
 
@@ -78,4 +94,3 @@ validate_results:
     }
     ```
   agent: cybersecurity_specialist
-

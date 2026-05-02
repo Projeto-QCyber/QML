@@ -1,159 +1,160 @@
 analyze_and_vote_backdoor:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Backdoor (class index = 0): vote = 1 if predicted_label == 0, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_backdoor
 
 analyze_and_vote_ddos_http:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for DDoS_HTTP (class index = 1): vote = 1 if predicted_label == 1, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_http
 
 analyze_and_vote_ddos_icmp:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for DDoS_ICMP (class index = 2): vote = 1 if predicted_label == 2, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_icmp
 
 analyze_and_vote_ddos_tcp:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for DDoS_TCP (class index = 3): vote = 1 if predicted_label == 3, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_tcp
 
 analyze_and_vote_ddos_udp:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for DDoS_UDP (class index = 4): vote = 1 if predicted_label == 4, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ddos_udp
 
 analyze_and_vote_fingerprinting:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Fingerprinting (class index = 5): vote = 1 if predicted_label == 5, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_fingerprinting
 
 analyze_and_vote_mitm:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for MITM (class index = 6): vote = 1 if predicted_label == 6, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_mitm
 
 analyze_and_vote_password:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Password (class index = 7): vote = 1 if predicted_label == 7, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_password
 
 analyze_and_vote_port_scanning:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Port_Scanning (class index = 8): vote = 1 if predicted_label == 8, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_port_scanning
 
 analyze_and_vote_ransomware:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Ransomware (class index = 9): vote = 1 if predicted_label == 9, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_ransomware
 
 analyze_and_vote_sql_injection:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for SQL_injection (class index = 10): vote = 1 if predicted_label == 10, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_sql_injection
 
 analyze_and_vote_uploading:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Uploading (class index = 11): vote = 1 if predicted_label == 11, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_uploading
 
 analyze_and_vote_vulnerability_scanner:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for Vulnerability_scanner (class index = 12): vote = 1 if predicted_label == 12, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_vulnerability_scanner
 
 analyze_and_vote_xss:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
     Cast a binary vote for XSS (class index = 13): vote = 1 if predicted_label == 13, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_xss
 
 analyze_and_vote_outras:
   description: >
     You have been provided with a list of 1 network data samples: {samples}.
-    Use the 'Model' tool to obtain the multiclass prediction (0–14) for each sample.
-    Cast a binary vote for Outras (class index = 14): vote = 1 if predicted_label == 14, else 0.
+    Use the 'Model' tool to obtain the multiclass prediction (0–14 or 99) for each sample.
+    Cast a binary vote for Others (class index = 14): vote = 1 if predicted_label == 14, else 0.
   expected_output: >
     JSON with arrays of length 1:
-    {"votes":[0/1], "predicted_labels":[0..14], "notes":["short note per sample", ...]}
+    {"votes":[0/1], "predicted_labels":[0..14 or 99], "notes":["short note per sample", ...]}
   agent: cybersecurity_specialist_outras
 
 final_evaluation_task:
   description: >
-    You have been provided with the outputs of all 15 specialists for the same 1 samples.
-    Each specialist returns a JSON object with:
+    You have been provided with the outputs of the selected top-k specialists for the same 1 sample.
+    The selected specialists correspond to the highest-probability candidate classes from the
+    probability model. Each specialist returns a JSON object with:
     - "votes": binary array (1 if the model's predicted_label equals the specialist's class, else 0)
-    - "predicted_labels": the raw multiclass labels (0–14) for each sample
+    - "predicted_labels": the raw multiclass labels (0–14 or 99) for each sample
     - "notes": short per-sample observations (optional but recommended), grounded in raw fields
       from the input samples when possible (e.g., TCP flags, port ranges, methods, URIs).
 
@@ -166,14 +167,30 @@ final_evaluation_task:
     {shap_explanation}
     ---
 
+    PROBABILITY CONTEXT:
+    ---
+    {probability_context}
+    ---
+
+    You MUST use the probability context when deciding whether to accept the
+    multiclass label or reject the classification for specialist review.
+    If the multiclass confidence is below "min_confidence", return prediction 99.
+    If the multiclass confidence is above "accept_without_llm_confidence", prefer accepting
+    the probability model prediction unless the selected specialists provide clear contradictory evidence.
+    If specialist votes disagree with the probability model, return prediction 99
+    unless there is a clear, evidence-based reason in the notes to override it.
+    Explain the probability/confidence rationale in the report.
+
     For each sample:
-    (1) Inspect which specialists voted 1 and read their notes;
-    (2) If exactly one specialist voted 1, select that class;
-    (3) If none voted 1, label the sample as "normal".
+    (1) Inspect which selected top-k specialists voted 1 and read their notes;
+    (2) Compare the votes with the probability context;
+    (3) If confidence is below threshold or evidence conflicts, return 0;
+    (4) If exactly one specialist voted 1 and probability context supports it, select that class;
+    (5) If none voted 1, return 99 instead of forcing a class.
     Write a concise rationale explaining any non-trivial tie-breaks.
   expected_output: >
     JSON with:
-    - "predictions": array of 1 final labels (one of: [Backdoor, DDoS_HTTP, DDoS_ICMP, DDoS_TCP, DDoS_UDP, Fingerprinting, MITM, Password, Port_Scanning, Ransomware, SQL_injection, Uploading, Vulnerability_scanner, XSS, Outras])
-    - "report": 3–6 sentences summarizing the audit process and citing 1–2 examples
-      where tie-breaks or overrides happened due to notes aligned with raw features.
+    - "predictions": array of 1 final integer labels. Use 99 for rejection/specialist review.
+    - "report": 3–6 sentences summarizing the audit process, probability/confidence, and
+      whether the result was accepted or rejected for specialist review.
   agent: cybersecurity_team_leader
