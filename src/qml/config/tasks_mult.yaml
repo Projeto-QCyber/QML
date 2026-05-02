@@ -184,7 +184,7 @@ final_evaluation_task:
     For each sample:
     (1) Inspect which selected top-k specialists voted 1 and read their notes;
     (2) Compare the votes with the probability context;
-    (3) If confidence is below threshold or evidence conflicts, return 0;
+    (3) If confidence is below threshold or evidence conflicts, return 99;
     (4) If exactly one specialist voted 1 and probability context supports it, select that class;
     (5) If none voted 1, return 99 instead of forcing a class.
     Write a concise rationale explaining any non-trivial tie-breaks.

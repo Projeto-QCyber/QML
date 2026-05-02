@@ -245,7 +245,7 @@ class CyberPredictMult:
             config=self.agents_config['cybersecurity_specialist_outras'],
             tools=[self.rf_tool],
             llm=_llm_default(),
-            verbose=True,
+            verbose=crew_verbose(),
             allow_delegation=False
         )
 
