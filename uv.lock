@@ -3552,6 +3552,7 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-ollama" },
     { name = "langgraph" },
+    { name = "matplotlib" },
     { name = "mysql" },
     { name = "mysql-connector-python" },
     { name = "numpy" },
@@ -3571,7 +3572,6 @@ quantum-convert = [
 [package.dev-dependencies]
 dev = [
     { name = "jupyterlab" },
-    { name = "matplotlib" },
 ]
 
 [package.metadata]
@@ -3588,6 +3588,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.3.29" },
     { name = "langchain-ollama", specifier = "==0.3.3" },
     { name = "langgraph", specifier = ">=0.6.7" },
+    { name = "matplotlib", specifier = ">=3.10.6" },
     { name = "mysql", specifier = ">=0.0.3" },
     { name = "mysql-connector-python", specifier = ">=9.4.0" },
     { name = "numpy", specifier = ">=2.0.0" },
@@ -3602,10 +3603,7 @@ requires-dist = [
 provides-extras = ["quantum-convert"]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "jupyterlab", specifier = ">=4.4.7" },
-    { name = "matplotlib", specifier = ">=3.10.6" },
-]
+dev = [{ name = "jupyterlab", specifier = ">=4.4.7" }]
 
 [[package]]
 name = "referencing"

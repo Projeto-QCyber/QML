@@ -26,6 +26,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "scikit-learn==1.8.0",
     "shap>=0.48.0",
+    "matplotlib>=3.10.6",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +48,5 @@ type = "crew"
 
 [dependency-groups]
 dev = [
-    "matplotlib>=3.10.6",
     "jupyterlab>=4.4.7",
 ]
