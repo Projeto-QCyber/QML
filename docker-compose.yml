@@ -34,4 +34,5 @@ services:
       - qcyber-network
 networks:
   qcyber-network:
-    driver: bridge
+    name: qcyber-network
+    external: true  # portanto, necessário subir serviços do backend principal inicialmente (ou apenas o mysql)
