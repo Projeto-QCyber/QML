@@ -17,7 +17,6 @@ dependencies = [
     "langchain-community>=0.3.29",
     "langchain-ollama==0.3.3",
     "langgraph>=0.6.7",
-    "matplotlib>=3.10.6",
     "mysql>=0.0.3",
     "mysql-connector-python>=9.4.0",
     "numpy>=2.0.0",
@@ -44,5 +43,6 @@ type = "crew"
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.10.6",
     "jupyterlab>=4.4.7",
 ]
