@@ -8,7 +8,7 @@ from qml.tools.shap_explain import load_model, save_waterfalls, save_violin_by_l
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
-DATA_PATH = ROOT_DIR / "data/dados_de_teste_q.csv"
+DATA_PATH = ROOT_DIR / "data" / "test" / "dados_de_teste.csv"
 
 
 def _resolve_model_path() -> Path:

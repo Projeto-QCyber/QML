@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Run real quantum_model inference using one row from CSV.",
     )
-    p.add_argument("--csv", default="data/dados_de_teste_q.csv", help="CSV source path.")
+    p.add_argument("--csv", default="data/test/dados_de_teste.csv", help="CSV source path.")
     p.add_argument("--row", type=int, default=0, help="Row index to inject into the tool.")
     p.add_argument(
         "--model-path",

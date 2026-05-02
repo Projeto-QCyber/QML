@@ -365,7 +365,7 @@ class ExplainTop2SHAP:
         env_bg = os.getenv("QML_SHAP_BACKGROUND_CSV")
         if env_bg:
             candidates.append(Path(env_bg))
-        default_bg = ROOT_DIR / "data/dados_de_teste_q.csv"
+        default_bg = ROOT_DIR / "data" / "test" / "dados_de_teste.csv"
         if default_bg.exists():
             candidates.append(default_bg)
 

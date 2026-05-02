@@ -13,7 +13,7 @@ from qml.utils.runtime import default_crew_enabled, env_flag
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-DATA_PATH = ROOT_DIR / "data" / "dados_de_teste_q.csv"
+DATA_PATH = ROOT_DIR / "data" / "test" / "dados_de_teste.csv"
 OUTPUT_DIR = ROOT_DIR / "src" / "qml" / "output"
 
 
