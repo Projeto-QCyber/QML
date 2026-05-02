@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 import requests
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -86,6 +87,25 @@ class OllamaNativeLLM(LLM):
         data = response.json()
         content = ((data.get("message") or {}).get("content") or "").strip()
         if not content:
+            last_content = next(
+                (
+                    item.get("content", "").strip()
+                    for item in reversed(chat_messages)
+                    if isinstance(item.get("content"), str) and item.get("content", "").strip()
+                ),
+                "",
+            )
+            observation = re.search(r"(?:^|\n)\s*Observation:\s*(\[[\s,01]+\])\s*$", last_content)
+            if observation:
+                values = [value.strip() for value in observation.group(1).strip("[]").split(",") if value.strip()]
+                if values and all(value in {"0", "1"} for value in values):
+                    recovered = f"[{', '.join(values)}]"
+                    logger.warning(
+                        "Ollama returned empty content after a binary tool observation; "
+                        "returning recovered tool result: %s",
+                        recovered,
+                    )
+                    return recovered
             raise ValueError(f"Ollama returned empty content: {data}")
         return content
 
