@@ -1,7 +1,5 @@
 services:
   flask-api:
-    depends_on: 
-      - mysql
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,9 +9,8 @@ services:
       - .env
     ports:
       - "${FLASK_API_PORT:?error}:${FLASK_API_PORT}"
-    environment:
-       - MYSQL_HOST=mysql  # sobreescrita
-       - MYSQL_PORT=3306  # sobreescrita
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - qcyber-network
   ollama:
@@ -33,18 +30,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    networks:
-      - qcyber-network
-  mysql:
-    image: mysql:9.4.0
-    container_name: qcyber_mysql
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - ./mysql_volume:/var/lib/mysql
-    ports:
-      - "${MYSQL_PORT:-50000}:3306"
     networks:
       - qcyber-network
 networks:
