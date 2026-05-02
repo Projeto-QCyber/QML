@@ -24,7 +24,7 @@ services:
       - ./ollama:/root/.ollama
       - ./entrypoint.ollama.sh:/entrypoint.ollama.sh
     ports:
-      - 11434:11434
+      - ${OLLAMA_PORT:-11434}:11434
     entrypoint: ["/bin/bash", "/entrypoint.ollama.sh"]
     deploy:
       resources:

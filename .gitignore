@@ -15,6 +15,7 @@ wheels/
 
 # Env
 .env*
+!.env.example
 
 # .idea
 .idea/

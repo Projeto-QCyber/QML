@@ -12,7 +12,7 @@ def recreate_database():
     """Recria o banco de dados qcyber_db completamente."""
 
     load_dotenv()
-    db_name = os.getenv('MYSQL_DB', 'qcyber_db')
+    db_name = os.getenv('MYSQL_DATABASE', 'qcyber_db')
 
     print("=" * 60)
     print("CRIAÇÃO DA ESTRUTURA DO BANCO DE DADOS - PROJETO QCYBER")
@@ -330,7 +330,7 @@ def ensure_bootstrap():
     Retorna True em sucesso, False caso contrário.
     """
     load_dotenv()
-    db_name = os.getenv('MYSQL_DB', 'qcyber_db')
+    db_name = os.getenv('MYSQL_DATABASE', 'qcyber_db')
     app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").strip().lower()
     try:
         _host = os.getenv('MYSQL_HOST') or 'mysql'
@@ -414,7 +414,7 @@ def verify_database():
     print("\nPASSO 5: Verificando a estrutura do banco de dados...")
 
     load_dotenv()
-    db_name = os.getenv('MYSQL_DB', 'qcyber_db')
+    db_name = os.getenv('MYSQL_DATABASE', 'qcyber_db')
 
     try:
         conn = pymysql.connect(

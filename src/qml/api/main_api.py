@@ -431,7 +431,7 @@ def analisar_pacote():
             # Mostra os valores efetivos (com fallbacks) sem expor senha
             _db_host = os.getenv('MYSQL_HOST') or 'mysql'
             _db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
-            _db_name = os.getenv('MYSQL_DB') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
+            _db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
             print(f"[{req_id}] [DB] Conectando ao MySQL host={_db_host} user={_db_user} db={_db_name}", flush=True)
         except Exception:
             pass

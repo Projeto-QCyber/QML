@@ -24,7 +24,7 @@ DB_CONFIG = {
     'port': get_env_var('APP_MYSQL_PORT'),
     'user': get_env_var('APP_MYSQL_USER'),
     'password': get_env_var('MYSQL_ROOT_PASSWORD'),
-    'database': get_env_var('APP_MYSQL_DB')
+    'database': get_env_var('APP_MYSQL_DATABASE')
 }
 
 # Lista de dados para simular a leitura em intervalos.
