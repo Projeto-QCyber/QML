@@ -1,262 +1,452 @@
-import joblib
-import pandas as pd
-import numpy as np
-import time
-from pathlib import Path
-from typing import List, Dict, Any, Literal, Type, Tuple
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field, PrivateAttr
-import shap
 import os
+from pathlib import Path
+from typing import Optional, List, Dict, Any, Literal
+
+import joblib
+import numpy as np
+import pandas as pd
+import shap
+
+# Ensure headless rendering for Matplotlib export
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+from qml.tools.model import MODEL_TO_APP_MULTICLASS_ID
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+APP_ATTACK_LABELS = {
+    0: "Backdoor",
+    1: "DDoS_HTTP",
+    2: "DDoS_ICMP",
+    3: "DDoS_TCP",
+    4: "DDoS_UDP",
+    5: "Fingerprinting",
+    6: "MITM",
+    7: "Password",
+    8: "Port_Scanning",
+    9: "Ransomware",
+    10: "SQL_injection",
+    11: "Uploading",
+    12: "Vulnerability_scanner",
+    13: "XSS",
+    14: "Others",
+    99: "Normal",
+}
 
-# Simple in-process caches to avoid reloading model and rebuilding the SHAP explainer
-_MODEL_CACHE: dict[str, object] = {}
-_EXPLAINER_CACHE: dict[str, shap.TreeExplainer] = {}
+
+def load_model(model_path: str | Path) -> object:
+    """Load a joblib model from disk."""
+    return joblib.load(Path(model_path))
 
 
-class ExplainInput(BaseModel):
-    """Input schema for Top-2 feature attribution tool."""
-    samples: List[Dict[str, Any]] = Field(
-        ..., description="A list of network data samples (dicts) for attribution."
-    )
+def align_features_to_model(model, X: pd.DataFrame) -> pd.DataFrame:
+    """Reorder/select columns to match the model's expected features if available.
+
+    Raises if any expected feature is missing.
+    """
+    if hasattr(model, "feature_names_in_"):
+        feats = list(getattr(model, "feature_names_in_"))
+        missing = [f for f in feats if f not in X.columns]
+        if missing:
+            raise ValueError(f"Missing features required by the model: {missing}")
+        return X[feats]
+    return X
 
 
-class ExplainTop2SHAP(BaseTool):
-    name: str = "ExplainTop2"
-    description: str = (
-        "Compute per-sample top-2 influential inputs using SHAP for the Random Forest model. "
-        "Returns concise lines ready for the leader, e.g.: \n"
-        "[1] tcp.flags, dst_port seem far from normal."
-    )
-    args_schema: Type[BaseModel] = ExplainInput
-    model: object
-    # Pydantic private attrs (won't be stripped/reset by BaseModel)
-    _mode: str = PrivateAttr(default="on")
-    _is_multiclass: bool = PrivateAttr(default=False)
-    _explainer: shap.TreeExplainer | None = PrivateAttr(default=None)
+def small_background(X: pd.DataFrame, background_size: int = 100, random_state: int = 0) -> pd.DataFrame:
+    """Return a small background subset of the given DataFrame."""
+    if len(X) <= background_size:
+        return X
+    return X.sample(background_size, random_state=random_state)
+
+
+def build_explainer(model, background: pd.DataFrame) -> shap.Explainer:
+    """Create a SHAP Explainer with a small background set."""
+    return shap.Explainer(model, background)
+
+
+def save_waterfalls(
+    model,
+    X: pd.DataFrame,
+    out_dir: Path,
+    n_samples: int = 10,
+    background_size: int = 100,
+    max_display: int = 10,
+    random_state: int = 0,
+    label_column: Optional[str] = "Attack_label",
+) -> list[Path]:
+    """Save up to n_samples SHAP waterfall plots using the given model and features.
+
+    - Uses a small background subset to keep things light.
+    - For multiclass models, picks the predicted class per sample for plotting.
+    Returns list of written SVG paths.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Keep original data to recover labels for titles/filenames
+    X_orig = X.copy()
+    # Align features to what the model expects
+    X = align_features_to_model(model, X)
+
+    # Only take the first n_samples to keep it light and deterministic
+    X_sel = X.iloc[: max(1, min(n_samples, len(X)))]
+    # Corresponding original rows (for labels)
+    orig_for_sel = None
+    if label_column and isinstance(X_orig, pd.DataFrame) and label_column in X_orig.columns:
+        try:
+            orig_for_sel = X_orig.loc[X_sel.index]
+        except Exception:
+            orig_for_sel = None
+
+    # Build explainer with a small background
+    background = small_background(X, background_size=background_size, random_state=random_state)
+    explainer = build_explainer(model, background)
+
+    # Compute SHAP explanations
+    exp = explainer(X_sel)
+
+    # If available, get predicted class per sample
+    pred_proba: Optional[np.ndarray]
+    try:
+        pred_proba = model.predict_proba(X_sel)  # type: ignore[attr-defined]
+        if isinstance(pred_proba, list):
+            # Guard against multi-output list form; use the first output
+            pred_proba = pred_proba[0]
+    except Exception:
+        pred_proba = None
+
+    written: list[Path] = []
+    classes = getattr(model, "classes_", None)
+
+    # Also try to get class predictions for titles
+    try:
+        preds = model.predict(X_sel)  # type: ignore[attr-defined]
+    except Exception:
+        preds = None
+
+    for i in range(len(X_sel)):
+        row_exp = exp[i]
+
+        # If multi-output, select the predicted class per-sample when possible
+        if hasattr(row_exp, "values") and getattr(row_exp.values, "ndim", 1) == 2 and row_exp.values.shape[1] > 1:
+            if pred_proba is not None and pred_proba.ndim == 2 and pred_proba.shape[0] == len(X_sel):
+                j = int(np.argmax(pred_proba[i]))
+            else:
+                j = 0
+            row_exp = row_exp[:, j]
+
+        # Plot and save
+        shap.plots.waterfall(row_exp, max_display=max_display, show=False)
+        # Build an informative title
+        pred_lbl = None
+        pred_prob = None
+        if preds is not None:
+            try:
+                pred_lbl = preds[i]
+            except Exception:
+                pred_lbl = None
+        if pred_proba is not None:
+            try:
+                pred_prob = float(np.max(pred_proba[i]))
+            except Exception:
+                pred_prob = None
+        true_lbl = None
+        if label_column and orig_for_sel is not None and label_column in orig_for_sel.columns:
+            try:
+                true_lbl = orig_for_sel.iloc[i][label_column]
+            except Exception:
+                true_lbl = None
+
+        # Compute base value and model output for this slice
+        try:
+            base_val = float(np.squeeze(row_exp.base_values))
+        except Exception:
+            base_val = None
+        try:
+            shap_sum = float(np.sum(np.squeeze(row_exp.values)))
+            fx_val = (base_val + shap_sum) if base_val is not None else None
+        except Exception:
+            fx_val = None
+
+        sample_id = X_sel.index[i] if hasattr(X_sel, "index") else (i + 1)
+
+        ax = plt.gca()
+        ax.set_xlabel("SHAP value (impact on model output)")
+        ax.set_ylabel("Features")
+        # Descriptive filename
+        def _s(x):
+            try:
+                return str(x).replace("/", "-").replace(" ", "_")
+            except Exception:
+                return str(x)
+
+        name_bits = [f"shap_waterfall_{i+1:02d}"]
+        if pred_lbl is not None:
+            name_bits.append(f"pred-{_s(pred_lbl)}")
+        if true_lbl is not None:
+            name_bits.append(f"label-{_s(true_lbl)}")
+        fname = out_dir / ("_".join(name_bits) + ".svg")
+        plt.tight_layout()
+        plt.savefig(fname, dpi=300, bbox_inches="tight", format="svg")
+        plt.close()
+        written.append(fname)
+
+    return written
+
+
+def _select_predicted_class_shap(exp: shap.Explanation, model, X: pd.DataFrame) -> np.ndarray:
+    """Return a (n_samples, n_features) SHAP matrix by selecting per-sample
+    the SHAP values of the predicted class when multi-output.
+    """
+    vals = exp.values
+    # Already 2D (n, d)
+    if getattr(vals, "ndim", 2) == 2:
+        return vals
+
+    # Expect (n, d, c). Choose argmax predicted class for each sample.
+    try:
+        proba = model.predict_proba(X)  # type: ignore[attr-defined]
+        if isinstance(proba, list):
+            proba = proba[0]
+    except Exception:
+        proba = None
+
+    n, d, *_ = vals.shape
+    out = np.zeros((n, d), dtype=float)
+    for i in range(n):
+        j = int(np.argmax(proba[i])) if proba is not None else 0
+        out[i, :] = vals[i, :, j]
+    return out
+
+
+def save_violin_by_label(
+    model,
+    df: pd.DataFrame,
+    label_column: str,
+    out_dir: Path,
+    sample_per_label: int = 50,
+    background_size: int = 200,
+    layered: bool = False,
+    max_display: int = 20,
+    random_state: int = 0,
+) -> list[Path]:
+    """Create balanced subsets (up to sample_per_label per label) and save a SHAP
+    violin summary plot per label value.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if label_column not in df.columns:
+        raise ValueError(f"Label column '{label_column}' not found in DataFrame")
+
+    # Balanced sampling per label
+    written: list[Path] = []
+    for label_val, group in df.groupby(label_column):
+        sub = group.sample(min(sample_per_label, len(group)), random_state=random_state)
+
+        # Features must include whatever the model expects (may include label columns)
+        X = align_features_to_model(model, sub)
+
+        # Background and explainer
+        bg = small_background(X, background_size=background_size, random_state=random_state)
+        explainer = build_explainer(model, bg)
+
+        # Explanations for this label subset
+        exp = explainer(X)
+
+        # Build a 2D shap matrix selecting per-sample predicted class if needed
+        shap_mat = _select_predicted_class_shap(exp, model, X)
+
+        # Plot
+        plt.figure()
+        plot_type = "layered_violin" if layered else "violin"
+        shap.plots.violin(
+            shap_mat,
+            features=X,
+            feature_names=list(X.columns),
+            plot_type=plot_type,
+            max_display=max_display,
+            color_bar_label="Coloration represents magnitude",
+            show=False,
+        )
+        # Title and axes
+        plt.xlabel("Shap Value (impact on model output) of 100 samples")
+        plt.ylabel("Features")
+        fname = out_dir / f"shap_violin_label_{label_val}.svg"
+        plt.tight_layout()
+        plt.savefig(fname, dpi=300, bbox_inches="tight", format="svg")
+        plt.close()
+        written.append(fname)
+
+    return written
+
+
+class ExplainTop2SHAP:
+    """
+    Lightweight helper that loads the random-forest model (binary or multiclass),
+    computes SHAP values for the provided samples and returns a human-readable
+    summary listing the most influential features.
+    """
 
     def __init__(
         self,
-        model_path: str | None = None,
         classification: Literal["multiclass", "binary"] = "binary",
-        mode: Literal["on", "off", "fast"] | None = None,
-        **kwargs,
+        model_path: Optional[str | Path] = None,
+        background_csv: Optional[str | Path] = None,
+        top_k: int = 2,
+        background_size: int = 200,
     ) -> None:
-        # Resolve mode from env if not provided (assign to attr after BaseModel init)
-        env_mode = os.getenv("QCYBER_SHAP_MODE", "on").strip().lower()
+        self.classification = classification
+        self.top_k = max(1, top_k)
+        self.background_size = max(1, background_size)
+        self.model_path = self._resolve_model_path(model_path)
+        self.model = load_model(self.model_path)
+        self._background_csv = Path(background_csv) if background_csv else None
 
-        if classification == "multiclass":
-            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
-        elif classification == "binary" and model_path is None:
-            model_path = ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+    # ------------------------------------------------------------------ helpers
+    def _resolve_model_path(self, explicit: Optional[str | Path]) -> Path:
+        def _candidate(path_like: Optional[str | Path]) -> Optional[Path]:
+            if not path_like:
+                return None
+            p = Path(path_like)
+            return p if p.exists() else None
 
-        key = f"{classification}:{Path(model_path).resolve()}"
+        if explicit:
+            explicit_path = Path(explicit)
+            if not explicit_path.exists():
+                raise FileNotFoundError(f"Specified SHAP model not found: {explicit_path}")
+            return explicit_path
 
-        # Load model once
-        if key not in _MODEL_CACHE:
-            print(f"[ExplainTop2] Loading model from {model_path}")
-            t_load = time.time()
-            _MODEL_CACHE[key] = joblib.load(model_path)
-            print(f"[ExplainTop2] Model loaded in {time.time() - t_load:.2f}s")
-        loaded_model = _MODEL_CACHE[key]
-        super().__init__(model=loaded_model, **kwargs)
+        env_key = "QML_RF_MODEL_MULT_PATH" if self.classification == "multiclass" else "QML_RF_MODEL_BIN_PATH"
+        qcyber_env_key = (
+            "QCYBER_MULTICLASS_MODEL_PATH"
+            if self.classification == "multiclass"
+            else "QCYBER_BINARY_MODEL_PATH"
+        )
+        env_path = _candidate(os.getenv(qcyber_env_key)) or _candidate(os.getenv(env_key))
+        if env_path:
+            return env_path
 
-        # Set private attrs after BaseModel init
-        self._mode = (mode or env_mode)
-        if self._mode not in ("on", "off", "fast"):
-            self._mode = "on"
-        self._is_multiclass = classification == "multiclass"
-        self._explainer = None
-        if self._mode == "on":
-            if key not in _EXPLAINER_CACHE:
-                print("[ExplainTop2] Building TreeExplainer ...")
-                t_exp = time.time()
-                _EXPLAINER_CACHE[key] = shap.TreeExplainer(
-                    self.model,
-                    feature_perturbation="tree_path_dependent"
-                )
-                print(f"[ExplainTop2] TreeExplainer ready in {time.time() - t_exp:.2f}s")
-            self._explainer = _EXPLAINER_CACHE[key]
+        default_path = (
+            ROOT_DIR / "IA/weights/traditional/random_forest_model_mult.joblib"
+            if self.classification == "multiclass"
+            else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin.joblib"
+        )
+        if default_path.exists():
+            return default_path
 
-    def _format_line(self, idx: int, feat_info: List[Tuple[str, str]]) -> str:
-        # One-liner tailored for the leader's quick read with directions
-        if len(feat_info) == 0:
-            return f"[{idx}], no salient inputs detected."
-        if len(feat_info) == 1:
-            name, direction = feat_info[0]
-            return f"[{idx}], {name} {direction}."
-        (n1, d1), (n2, d2) = feat_info[0], feat_info[1]
-        return f"[{idx}], {n1} {d1}, {n2} {d2}."
+        legacy_path = (
+            ROOT_DIR / "IA/weights/traditional/random_forest_model_mult_q.joblib"
+            if self.classification == "multiclass"
+            else ROOT_DIR / "IA/weights/traditional/random_forest_model_bin_q.joblib"
+        )
+        if legacy_path.exists():
+            return legacy_path
 
-    def _topk_from_shap(self, df: pd.DataFrame) -> List[List[Tuple[str, str]]]:
+        raise FileNotFoundError(
+            f"Could not locate SHAP model for classification='{self.classification}'. "
+            "Set QML_RF_MODEL_MULT_PATH / QML_RF_MODEL_BIN_PATH or provide model_path."
+        )
+
+    def _prepare_dataframe(self, samples: List[Dict[str, Any]]) -> pd.DataFrame:
+        if not samples:
+            raise ValueError("ExplainTop2SHAP requires at least one sample.")
+        df = pd.DataFrame(samples)
+        if df.empty:
+            raise ValueError("ExplainTop2SHAP received empty samples.")
+        df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+        return align_features_to_model(self.model, df)
+
+    def _load_background_source(self) -> Optional[pd.DataFrame]:
+        candidates: List[Path] = []
+        if self._background_csv:
+            candidates.append(self._background_csv)
+        env_bg = os.getenv("QML_SHAP_BACKGROUND_CSV")
+        if env_bg:
+            candidates.append(Path(env_bg))
+        default_bg = ROOT_DIR / "data" / "test" / "dados_de_teste.csv"
+        if default_bg.exists():
+            candidates.append(default_bg)
+
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                df = pd.read_csv(path)
+                if df.empty:
+                    continue
+                df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+                return align_features_to_model(self.model, df)
+            except Exception as exc:
+                print(f"[ExplainTop2SHAP] Failed to use background '{path}': {exc}")
+        return None
+
+    def _prepare_background(self, df: pd.DataFrame) -> pd.DataFrame:
+        bg = self._load_background_source()
+        if bg is not None and not bg.empty:
+            return small_background(bg, background_size=min(len(bg), self.background_size))
+        return small_background(df, background_size=min(len(df), self.background_size))
+
+    def _compute_explanation(self, df: pd.DataFrame) -> shap.Explanation:
+        try:
+            explainer = shap.TreeExplainer(self.model)
+            return explainer(df)
+        except Exception:
+            background = self._prepare_background(df)
+            explainer = shap.Explainer(self.model, background)
+            return explainer(df)
+
+    def _summarize(self, exp: shap.Explanation, df: pd.DataFrame) -> str:
+        shap_matrix = _select_predicted_class_shap(exp, self.model, df)
+        row = shap_matrix[0]
         feature_names = list(df.columns)
 
-        # Get predictions to select the class for multiclass SHAP values
+        order = np.argsort(np.abs(row))[::-1][: min(self.top_k, len(feature_names))]
         try:
-            y_pred = self.model.predict(df)
+            prediction = self.model.predict(df)[0]
         except Exception:
-            y_pred = None
+            prediction = None
+        prediction_text = _format_prediction_label(prediction, self.classification)
 
-        # Compute SHAP values
-        print(f"[ExplainTop2] Computing shap_values for df shape={df.shape} ...")
-        t_sv = time.time()
-        values = self._explainer.shap_values(df, check_additivity=False)  # type: ignore
-        dt_sv = time.time() - t_sv
+        header = (
+            f"Top {len(order)} features influencing the {self.classification} prediction"
+            + (f" (predicted class: {prediction_text})" if prediction_text else "")
+            + ":"
+        )
 
-        n_samples, n_feat = df.shape
-        # Build a per-sample SHAP matrix for the predicted class: [n_samples, n_features]
-        shap_mat = np.zeros((n_samples, n_feat), dtype=float)
+        lines = [header]
+        for idx in order:
+            value = float(row[idx])
+            feature = feature_names[idx]
+            trend = "increases" if value >= 0 else "decreases"
+            lines.append(
+                f"- {feature}: SHAP={value:.4f} ({trend} the model score for this sample)"
+            )
 
-        if isinstance(values, list):
-            print(f"[ExplainTop2] shap_values computed in {dt_sv:.2f}s (~{dt_sv/n_samples:.4f}s/sample) (multiclass list={len(values)})")
-            classes = getattr(self.model, "classes_", None)
-            for i in range(n_samples):
-                if y_pred is not None:
-                    c_pred = y_pred[i]
-                    if classes is not None:
-                        try:
-                            c_idx = int(np.where(classes == c_pred)[0][0])
-                        except Exception:
-                            c_idx = int(c_pred)
-                    else:
-                        c_idx = int(c_pred)
-                else:
-                    c_idx = 0
-                shap_mat[i, :] = values[c_idx][i, :]
-        else:
-            shape_info = getattr(values, "shape", "unknown")
-            print(f"[ExplainTop2] shap_values computed in {dt_sv:.2f}s (~{dt_sv/n_samples:.4f}s/sample) (array shape={shape_info})")
-            if values.ndim == 2:
-                shap_mat = values
-            elif values.ndim == 3:
-                # Identify axes for (samples, features, classes), reorder to that
-                dims = values.shape
-                s_axis = int(np.argmin([abs(d - n_samples) for d in dims]))
-                f_axis = int(np.argmin([abs(d - n_feat) for d in dims]))
-                c_axis = [ax for ax in range(3) if ax not in (s_axis, f_axis)][0]
-                values_re = np.moveaxis(values, [s_axis, f_axis, c_axis], [0, 1, 2])
-                classes = getattr(self.model, "classes_", None)
-                for i in range(n_samples):
-                    if y_pred is not None:
-                        c_pred = y_pred[i]
-                        if classes is not None:
-                            try:
-                                c_idx = int(np.where(classes == c_pred)[0][0])
-                            except Exception:
-                                c_idx = int(c_pred)
-                        else:
-                            c_idx = int(c_pred)
-                    else:
-                        c_idx = 0
-                    shap_mat[i, :] = values_re[i, :, c_idx]
-            else:
-                raise ValueError(f"Unexpected shap_values ndim: {values.ndim} shape={values.shape}")
+        return "\n".join(lines)
 
-        # Direction severity thresholds
-        abs_mat = np.abs(shap_mat)
-        large_batch = n_samples >= 20
-
-        if large_batch:
-            # Use global per-feature thresholds across the batch
-            q99_global = np.quantile(abs_mat, 0.99, axis=0)
-
-            def dir_label_global(val: float, idx_f: int) -> str:
-                mag = abs(val)
-                if mag >= q99_global[idx_f]:
-                    return "absolutely abnormal"
-                if val > 0:
-                    return "higher than normal"
-                if val < 0:
-                    return "lower than normal"
-                return "near normal"
-
-            results: List[List[Tuple[str, str]]] = []
-            for i in range(n_samples):
-                sv = shap_mat[i, :]
-                order = np.argsort(np.abs(sv))[-2:][::-1]
-                info: List[Tuple[str, str]] = []
-                for j in order:
-                    j_int = int(j)
-                    info.append((feature_names[j_int], dir_label_global(sv[j_int], j_int)))
-                results.append(info)
-        else:
-            # Small batch (e.g. 1 sample in multiclass specialists). Use per-sample thresholds across features.
-            results = []
-            for i in range(n_samples):
-                sv = shap_mat[i, :]
-                abs_sv = np.abs(sv)
-                # 95th and 99th percentiles across this sample's features
-                p99 = np.quantile(abs_sv, 0.99)
-
-                def dir_label_local(val: float) -> str:
-                    mag = abs(val)
-                    if mag >= p99:
-                        return "absolutely abnormal"
-                    if val > 0:
-                        return "higher than normal"
-                    if val < 0:
-                        return "lower than normal"
-                    return "near normal"
-
-                order = np.argsort(abs_sv)[-2:][::-1]
-                info: List[Tuple[str, str]] = []
-                for j in order:
-                    j_int = int(j)
-                    info.append((feature_names[j_int], dir_label_local(sv[j_int])))
-                results.append(info)
-
-        return results
-
+    # ---------------------------------------------------------------- public API
     def _run(self, samples: List[Dict[str, Any]]) -> str:
-        df_input = pd.DataFrame(samples)
-        if df_input.empty:
-            return "[]"
+        """
+        Mirrors the crew tool interface so the API layer can re-use it directly.
+        """
+        df = self._prepare_dataframe(samples)
+        explanation = self._compute_explanation(df)
+        return self._summarize(explanation, df)
 
-        print(f"[ExplainTop2] _run: mode={self._mode} samples={len(samples)}, features={df_input.shape[1]}")
 
-        # OFF mode: skip entirely
-        if self._mode == "off":
-            return ""
+def _format_prediction_label(prediction: object, classification: str) -> str:
+    if prediction is None:
+        return ""
+    try:
+        prediction_id = int(prediction)
+    except Exception:
+        return str(prediction)
 
-        # FAST mode: lightweight heuristic using feature importances and batch medians
-        if self._mode == "fast":
-            if not hasattr(self.model, "feature_importances_"):
-                return "\n".join(self._format_line(i + 1, []) for i in range(len(samples)))
-            importances = np.asarray(getattr(self.model, "feature_importances_"))
-            # Guard if feature counts mismatch
-            if importances.shape[0] != df_input.shape[1]:
-                return "\n".join(self._format_line(i + 1, []) for i in range(len(samples)))
-            order = np.argsort(importances)[-2:][::-1]
-            top_idx = [int(x) for x in order]
-            top_feats = [df_input.columns[j] for j in top_idx]
-            medians = {f: float(df_input[f].median()) for f in top_feats}
-            lines = []
-            for i in range(len(df_input)):
-                info: List[Tuple[str, str]] = []
-                for f in top_feats:
-                    val = float(df_input.iloc[i][f])
-                    direction = "higher than normal" if val >= medians[f] else "lower than normal"
-                    info.append((f, direction))
-                lines.append(self._format_line(i + 1, info))
-            return "\n".join(lines)
+    if classification != "multiclass":
+        return str(prediction_id)
 
-        # ON mode: compute SHAP with chunking to reduce peak memory
-        t0 = time.time()
-        chunk_env = os.getenv("QCYBER_SHAP_CHUNK", "64")
-        try:
-            chunk_size = max(1, int(chunk_env))
-        except Exception:
-            chunk_size = 64
-        n = len(df_input)
-        all_lines: List[str] = []
-        for start in range(0, n, chunk_size):
-            end = min(start + chunk_size, n)
-            sub_df = df_input.iloc[start:end]
-            top2_per_sample = self._topk_from_shap(sub_df)
-            lines = [self._format_line(start + i + 1, feats) for i, feats in enumerate(top2_per_sample)]
-            all_lines.extend(lines)
-        print(f"[ExplainTop2] Top-2 selection done in {time.time() - t0:.2f}s (chunk_size={chunk_size})")
-        return "\n".join(all_lines)
+    app_id = MODEL_TO_APP_MULTICLASS_ID.get(prediction_id, prediction_id)
+    label = APP_ATTACK_LABELS.get(app_id, f"Classe_{app_id}")
+    return f"{app_id} ({label})"

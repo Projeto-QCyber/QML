@@ -67,6 +67,10 @@ def resolve_tipo_ataque_id(cursor, tipo_ataque_label):
         # Mapas de apoio
         id_map = {int(r['id']): (int(r['id']), r['nome']) for r in rows}
         norm_map = {_norm(r['nome']): (int(r['id']), r['nome']) for r in rows}
+        if 'others' not in norm_map and 14 in id_map:
+            norm_map['others'] = id_map[14]
+        if 'outras' not in norm_map and 14 in id_map:
+            norm_map['outras'] = id_map[14]
 
         # 1) Se veio número (ou string numérica), tenta por ID
         if isinstance(tipo_ataque_label, (int, float)) or (isinstance(tipo_ataque_label, str) and tipo_ataque_label.isdigit()):
@@ -117,12 +121,32 @@ def extract_first_int_list_from_text(text):
 
 
 
+def _resolve_mysql_host() -> str:
+    """
+    Decide the proper MySQL host:
+    - When running inside Docker, use the service name 'mysql'
+    - When running locally (no Docker indicators), default to 'localhost'
+    - Allow explicit overrides via MYSQL_HOST env var
+    """
+    env_host = (os.getenv('MYSQL_HOST') or '').strip()
+    if env_host:
+        if env_host == 'mysql':
+            if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
+                return env_host
+            return 'localhost'
+        return env_host
+
+    if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
+        return 'mysql'
+    return 'localhost'
+
+
 def get_db_connection():
     """Cria e retorna uma nova conexão com o banco para cada requisição.
     Usa variáveis de ambiente com fallbacks robustos e ignora valores vazios.
     """
     # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
-    db_host = get_env_var('MYSQL_HOST', 'mysql')
+    db_host = _resolve_mysql_host()
     db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
     db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
     db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'

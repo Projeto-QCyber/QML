@@ -22,10 +22,12 @@
 analyze_and_vote_1:
   description: >
     You are an AI agent analyzing network traffic samples.
-    You are provided with EXACTLY this JSON array of 5 samples:
+    You are provided with EXACTLY this JSON array of {sample_count} sample(s):
     {samples}
 
-    Your job is ONLY to call the tool "Model" with arguments as a JSON OBJECT (not a string):
+    You may call one or both available tools: "Model" and "quantum_model".
+    Decide if and when to use each tool.
+    If you call a tool, use arguments as a JSON OBJECT (not a string):
     {"samples": <the JSON array above>}
 
     Strict rules for the tool call:
@@ -34,18 +36,20 @@ analyze_and_vote_1:
     - Do NOT reformat or alter the samples in any way.
     - Return one binary vote for EACH input sample, preserving the original order.
     - Do NOT return only the samples classified as attacks.
-    - If the input has 5 samples, the final list MUST have exactly 5 values.
+    - If the input has {sample_count} sample(s), the final list MUST have exactly {sample_count} value(s).
     - Output EXACTLY and ONLY what the tool returns (e.g., [0/1,...]).
   expected_output: >
-    A list of exactly 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of exactly {sample_count} binary vote(s) (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_1
 
 analyze_and_vote_2:
   description: >
-    You are an AI agent independently analyzing the SAME 5 samples:
+    You are an AI agent independently analyzing the SAME {sample_count} sample(s):
     {samples}
 
-    Your job is ONLY to call the tool "Model" with arguments as a JSON OBJECT (not a string):
+    You may call one or both available tools: "Model" and "quantum_model".
+    Decide if and when to use each tool.
+    If you call a tool, use arguments as a JSON OBJECT (not a string):
     {"samples": <the JSON array above>}
 
     Strict rules for the tool call:
@@ -54,16 +58,16 @@ analyze_and_vote_2:
     - Do NOT modify the data in any way.
     - Return one binary vote for EACH input sample, preserving the original order.
     - Do NOT return only the samples classified as attacks.
-    - If the input has 5 samples, the final list MUST have exactly 5 values.
+    - If the input has {sample_count} sample(s), the final list MUST have exactly {sample_count} value(s).
     - Output EXACTLY the result from the tool.
   expected_output: >
-    A list of exactly 5 binary votes (0 or 1), directly as returned by the tool.
+    A list of exactly {sample_count} binary vote(s) (0 or 1), directly as returned by the tool.
   agent: cybersecurity_analyst_2
 
 
 validate_results:
   description: >
-    You are a senior cybersecurity specialist. You have received votes from two junior analysts on 5 data samples.
+    You are a senior cybersecurity specialist. You have received votes from two junior analysts on {sample_count} data sample(s).
     - Analyst 1 votes: {analyze_and_vote_1.output}
     - Analyst 2 votes: {analyze_and_vote_2.output}
 
@@ -79,7 +83,7 @@ validate_results:
     - If analysts disagree, use the probability context to resolve the vote.
     - Return one final binary prediction for EACH original input sample, preserving order.
     - Do NOT return only attack samples. Normal samples must remain in the list as 0.
-    - For a 5-sample batch, "predictions" MUST contain exactly 5 integers.
+    - For this batch, "predictions" MUST contain exactly {sample_count} integer(s).
     - Respond STRICTLY in JSON with a key "predictions" containing ONLY the list of final binary votes.
     - Do not include any extra text outside of the JSON.
 

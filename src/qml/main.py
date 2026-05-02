@@ -28,7 +28,7 @@ def _load_default_samples(count: int = 5) -> tuple[list[dict[str, Any]], list[An
     label_columns = [column for column in ("Attack_type", "Attack_label") if column in df.columns]
 
     if "Attack_type" in df.columns:
-        attacks = df[df["Attack_type"] != 7]
+        attacks = df[df["Attack_type"] != 0]
         if len(attacks) >= min(3, count):
             first = attacks.sample(min(3, count), random_state=42)
             rest = df.drop(first.index)

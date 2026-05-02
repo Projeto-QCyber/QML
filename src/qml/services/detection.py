@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from qml.tools.model import RFModel
+from qml.tools.model import APP_MULTICLASS_PROBABILITY_CLASS_IDS, RFModel
 
 
 ATTACK_LABELS: dict[int, str] = {
@@ -26,6 +26,7 @@ ATTACK_LABELS: dict[int, str] = {
     11: "Uploading",
     12: "Vulnerability_scanner",
     13: "XSS",
+    14: "Others",
     99: "Normal",
 }
 
@@ -242,7 +243,8 @@ class BatchDetectionService:
         )
         result = CyberPredict().crew().kickoff(
             inputs={
-                "samples": samples,
+                "samples": json.dumps(samples, ensure_ascii=False),
+                "sample_count": len(samples),
                 "binary_probability_context": json.dumps(probability_context, ensure_ascii=False),
             }
         )
@@ -302,7 +304,8 @@ class BatchDetectionService:
 
         result = CyberPredictMult().crew_for_class_ids(candidate_class_ids).kickoff(
             inputs={
-                "samples": [sample],
+                "samples": json.dumps([sample], ensure_ascii=False),
+                "sample_count": 1,
                 "shap_explanation": "",
                 "probability_context": json.dumps(probability_context, ensure_ascii=False),
             }
@@ -820,6 +823,7 @@ def _build_probability_context(
         },
         "rejection_policy": {
             "return_99_when_multiclass_confidence_below_threshold": True,
+            "normal_class_id": 99,
             "send_to_specialist_when_workflow_disagrees_with_probability_model": True,
             "call_only_top_k_specialists_when_confidence_is_ambiguous": True,
         },
@@ -866,13 +870,14 @@ def _argmax(values: list[float] | None) -> int | None:
 def _label_probabilities(probabilities: list[float] | None) -> list[dict[str, Any]]:
     if not probabilities:
         return []
+    class_ids = _probability_class_ids(probabilities)
     return [
         {
-            "class_id": idx,
-            "label": ATTACK_LABELS.get(idx, f"Classe_{idx}"),
+            "class_id": class_id,
+            "label": ATTACK_LABELS.get(class_id, f"Classe_{class_id}"),
             "probability": float(probability),
         }
-        for idx, probability in enumerate(probabilities)
+        for class_id, probability in zip(class_ids, probabilities)
     ]
 
 
@@ -883,6 +888,7 @@ def _top_label_probabilities(
     if not probabilities:
         return []
 
+    class_ids = _probability_class_ids(probabilities)
     ranked_indices = sorted(
         range(len(probabilities)),
         key=lambda idx: float(probabilities[idx]),
@@ -891,12 +897,18 @@ def _top_label_probabilities(
     return [
         {
             "rank": rank + 1,
-            "class_id": idx,
-            "label": ATTACK_LABELS.get(idx, f"Classe_{idx}"),
+            "class_id": class_ids[idx],
+            "label": ATTACK_LABELS.get(class_ids[idx], f"Classe_{class_ids[idx]}"),
             "probability": float(probabilities[idx]),
         }
         for rank, idx in enumerate(ranked_indices)
     ]
+
+
+def _probability_class_ids(probabilities: list[float]) -> list[int]:
+    if len(probabilities) == len(APP_MULTICLASS_PROBABILITY_CLASS_IDS):
+        return APP_MULTICLASS_PROBABILITY_CLASS_IDS
+    return list(range(len(probabilities)))
 
 
 def _accepted_attack_groups(classified_attacks: list[ClassifiedSample]) -> list[dict[str, Any]]:

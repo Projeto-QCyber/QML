@@ -55,9 +55,22 @@ def recreate_database():
                            ) ENGINE=InnoDB;
                            """)
             label_map = {
-                'Backdoor': 0, 'DDoS_HTTP': 1, 'DDoS_ICMP': 2, 'DDoS_TCP': 3, 'DDoS_UDP': 4,
-                'Fingerprinting': 5, 'MITM': 6, 'Password': 7, 'Port_Scanning': 8, 'Ransomware': 9,
-                'SQL_injection': 10, 'Uploading': 11, 'Vulnerability_scanner': 12, 'XSS': 13, 'Normal': 99
+                'Backdoor': 0,
+                'DDoS_HTTP': 1,
+                'DDoS_ICMP': 2,
+                'DDoS_TCP': 3,
+                'DDoS_UDP': 4,
+                'Fingerprinting': 5,
+                'MITM': 6,
+                'Password': 7,
+                'Port_Scanning': 8,
+                'Ransomware': 9,
+                'SQL_injection': 10,
+                'Uploading': 11,
+                'Vulnerability_scanner': 12,
+                'XSS': 13,
+                'Others': 14,
+                'Normal': 99,
             }
             for nome, id_ataque in label_map.items():
                 cursor.execute("INSERT INTO enum_tipo_ataque (id, nome, descricao) VALUES (%s, %s, %s)",
@@ -372,6 +385,18 @@ def ensure_bootstrap():
                 if not pred_col_present and got_lock:
                     print("⚠️ Coluna 'predicao' ausente em 'deteccoes'. Aplicando patch de schema...")
                     cursor.execute("ALTER TABLE deteccoes ADD COLUMN predicao INT NOT NULL DEFAULT 1 AFTER dispositivo_id")
+
+                if got_lock:
+                    cursor.execute(
+                        "INSERT IGNORE INTO enum_tipo_ataque (id, nome, descricao) "
+                        "VALUES (%s, %s, %s)",
+                        (14, "Others", "Detecção do tipo Others."),
+                    )
+                    cursor.execute(
+                        "INSERT IGNORE INTO enum_tipo_ataque (id, nome, descricao) "
+                        "VALUES (%s, %s, %s)",
+                        (99, "Normal", "Detecção do tipo Normal."),
+                    )
 
                 conn.commit()
             finally:

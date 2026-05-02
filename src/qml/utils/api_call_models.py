@@ -1,7 +1,8 @@
 import os
 import logging
+import requests
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 from dotenv import load_dotenv
 from crewai import LLM
 
@@ -26,11 +27,67 @@ def _get_ollama_base_url() -> str:
     - Inside Docker containers: use service name 'ollama'
     - Outside Docker containers: use 'localhost'
     """
-    # Check if we're running inside Docker by looking for common indicators
     if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER'):
         return "http://ollama:11434"
-    else:
-        return "http://localhost:11434"
+    return "http://localhost:11434"
+
+
+def _strip_ollama_prefix(model_name: str) -> str:
+    return model_name.removeprefix("ollama/")
+
+
+class OllamaNativeLLM(LLM):
+    """CrewAI-compatible Ollama client that uses native chat options."""
+
+    def __init__(self, *args: Any, think: bool = False, **kwargs: Any) -> None:
+        self.ollama_think = think
+        super().__init__(*args, think=think, **kwargs)
+
+    def call(
+        self,
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        if isinstance(messages, str):
+            chat_messages = [{"role": "user", "content": messages}]
+        else:
+            chat_messages = messages
+
+        options: dict[str, Any] = {}
+        if self.temperature is not None:
+            options["temperature"] = self.temperature
+        if self.top_p is not None:
+            options["top_p"] = self.top_p
+        token_limit = self.max_completion_tokens or self.max_tokens
+        if token_limit is not None:
+            options["num_predict"] = token_limit
+        if self.stop:
+            options["stop"] = self.stop
+
+        payload: dict[str, Any] = {
+            "model": _strip_ollama_prefix(self.model),
+            "messages": chat_messages,
+            "stream": False,
+            "think": self.ollama_think,
+        }
+        if options:
+            payload["options"] = options
+
+        response = requests.post(
+            f"{self.base_url.rstrip('/')}/api/chat",
+            json=payload,
+            timeout=self.timeout or 300,
+        )
+        response.raise_for_status()
+        data = response.json()
+        content = ((data.get("message") or {}).get("content") or "").strip()
+        if not content:
+            raise ValueError(f"Ollama returned empty content: {data}")
+        return content
 
 
 def _get_env_mode() -> Environment:
@@ -166,19 +223,35 @@ def _debug_llm_config(role: str, model_name: str, max_tokens: int, base_url: str
     print(message)
 
 
+def _ollama_llm(
+    *,
+    role: str,
+    model_name: str,
+    max_tokens: int,
+    temperature: float,
+) -> OllamaNativeLLM:
+    base_url = _get_ollama_base_url()
+    _debug_llm_config(role, model_name, max_tokens, base_url)
+    return OllamaNativeLLM(
+        model=model_name,
+        base_url=base_url,
+        api_key="ollama",
+        temperature=temperature,
+        max_completion_tokens=max_tokens,
+        think=_env_flag("QCYBER_OLLAMA_THINK", default=False),
+        timeout=_get_int_env("QCYBER_OLLAMA_TIMEOUT", 300),
+    )
+
+
 def _llm_default(model_name: str | None = None, max_tokens: int | None = None) -> LLM:
     config = _env_mode_select_model_llm()
     selected_model = model_name or config.default_model
     selected_max_tokens = max_tokens or config.default_max_tokens
-    base_url = _get_ollama_base_url()
-    #_debug_llm_config("default", selected_model, selected_max_tokens, base_url)
-
-    return LLM(
-        model=selected_model,
-        base_url=base_url,
-        api_key="ollama",
+    return _ollama_llm(
+        role="default",
+        model_name=selected_model,
+        max_tokens=selected_max_tokens,
         temperature=0.1,
-        max_completion_tokens=selected_max_tokens,
     )
 
 
@@ -186,15 +259,11 @@ def _llm_leader(model_name: str | None = None, max_tokens: int | None = None) ->
     config = _env_mode_select_model_llm()
     selected_model = model_name or config.leader_model
     selected_max_tokens = max_tokens or config.leader_max_tokens
-    base_url = _get_ollama_base_url()
-    #_debug_llm_config("leader", selected_model, selected_max_tokens, base_url)
-
-    return LLM(
-        model=selected_model,
-        base_url=base_url,
-        api_key="ollama",
+    return _ollama_llm(
+        role="leader",
+        model_name=selected_model,
+        max_tokens=selected_max_tokens,
         temperature=0.1,
-        max_completion_tokens=selected_max_tokens,
     )
 
 
@@ -202,13 +271,9 @@ def _llm_coder_response(model_name: str | None = None, max_tokens: int | None = 
     config = _env_mode_select_model_llm()
     selected_model = model_name or os.getenv("QML_CODER_MODEL") or config.coder_model
     selected_max_tokens = max_tokens or config.coder_max_tokens
-    base_url = _get_ollama_base_url()
-    #_debug_llm_config("coder_response", selected_model, selected_max_tokens, base_url)
-
-    return LLM(
-        model=selected_model,
-        base_url=base_url,
-        api_key="ollama",
+    return _ollama_llm(
+        role="coder_response",
+        model_name=selected_model,
+        max_tokens=selected_max_tokens,
         temperature=0.2,
-        max_completion_tokens=selected_max_tokens,
     )

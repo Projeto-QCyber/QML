@@ -27,6 +27,7 @@ CLASS_CREW_METHODS = {
     11: ("cybersecurity_specialist_uploading", "analyze_and_vote_uploading"),
     12: ("cybersecurity_specialist_vulnerability_scanner", "analyze_and_vote_vulnerability_scanner"),
     13: ("cybersecurity_specialist_xss", "analyze_and_vote_xss"),
+    14: ("cybersecurity_specialist_outras", "analyze_and_vote_outras"),
 }
 
 
@@ -95,7 +96,7 @@ class CyberPredictMult:
         self.rf_tool = RFModel(classification="multiclass")
 
     # -------------------------------------------------------------------------
-    # 14 Specialist Agents (one per attack family)
+    # 15 Specialist Agents (one per attack family)
     # The keys below must match your YAML in agents_mult.yaml
     # -------------------------------------------------------------------------
     @agent
@@ -238,6 +239,16 @@ class CyberPredictMult:
             allow_delegation=False
         )
 
+    @agent
+    def cybersecurity_specialist_outras(self) -> Agent:
+        return Agent(
+            config=self.agents_config['cybersecurity_specialist_outras'],
+            tools=[self.rf_tool],
+            llm=_llm_default(),
+            verbose=crew_verbose(),
+            allow_delegation=False
+        )
+
     # -------------------------------------------------------------------------
     # Team Leader (moderator / final arbiter)
     # -------------------------------------------------------------------------
@@ -252,7 +263,7 @@ class CyberPredictMult:
         )
 
     # -------------------------------------------------------------------------
-    # 14 Analyze-and-vote tasks (one per specialist)
+    # 15 Analyze-and-vote tasks (one per specialist)
     # The keys below must match your YAML in tasks_mult.yaml
     # -------------------------------------------------------------------------
     @task
@@ -353,13 +364,20 @@ class CyberPredictMult:
             agent=self.cybersecurity_specialist_ddos_icmp()
         )
 
+    @task
+    def analyze_and_vote_outras(self) -> Task:
+        return Task(
+            config=self.tasks_config['analyze_and_vote_outras'],
+            agent=self.cybersecurity_specialist_outras()
+        )
+
     # -------------------------------------------------------------------------
     # Final evaluation task (leader consolidates and explains rationale)
     # -------------------------------------------------------------------------
     @task
     def final_evaluation_task(self) -> Task:
         """
-        The leader receives the outputs of all 14 specialist tasks through `context`
+        The leader receives the outputs of all 15 specialist tasks through `context`
         and must return a final per-sample label with short justification.
         """
         return Task(
@@ -380,6 +398,7 @@ class CyberPredictMult:
                 self.analyze_and_vote_xss(),
                 self.analyze_and_vote_ddos_udp(),
                 self.analyze_and_vote_ddos_icmp(),
+                self.analyze_and_vote_outras(),
             ],
             expected_output=(
                 "Return STRICT JSON only, exactly in this schema: "
@@ -444,7 +463,7 @@ class CyberPredictMult:
     @crew
     def crew(self) -> Crew:
         """
-        Orchestrates the 14 parallel(ish) specialist analyses plus the leader's arbitration.
+        Orchestrates the 15 parallel(ish) specialist analyses plus the leader's arbitration.
         Note: CrewAI executes tasks internally; with the hierarchical process,
         the team leader acts as a manager that 'discusses' and converges decisions.
         """
@@ -463,6 +482,7 @@ class CyberPredictMult:
                 self.cybersecurity_specialist_xss(),
                 self.cybersecurity_specialist_ddos_udp(),
                 self.cybersecurity_specialist_ddos_icmp(),
+                self.cybersecurity_specialist_outras(),
             ],
             tasks=self.tasks,
             process=Process.hierarchical,             # leader-managed deliberation
