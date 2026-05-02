@@ -21,7 +21,6 @@ wheels/
 .idea/
 
 # Docker volumes
-mysql_volume
 ollama
 
 src/qml/output/*

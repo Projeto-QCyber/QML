@@ -9,7 +9,6 @@ import pymysql
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from datetime import datetime, timezone
-from qml.api.create_qcyber_db import ensure_bootstrap
 from qml.utils.generic import get_env_var
 from qml.utils.runtime import default_crew_enabled, env_flag
 
@@ -121,38 +120,24 @@ def extract_first_int_list_from_text(text):
 
 
 
-def _resolve_mysql_host() -> str:
-    """
-    Decide the proper MySQL host:
-    - When running inside Docker, use the service name 'mysql'
-    - When running locally (no Docker indicators), default to 'localhost'
-    - Allow explicit overrides via MYSQL_HOST env var
-    """
-    env_host = (os.getenv('MYSQL_HOST') or '').strip()
-    if env_host:
-        if env_host == 'mysql':
-            if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
-                return env_host
-            return 'localhost'
-        return env_host
-
-    if os.path.exists('/.dockerenv') or os.getenv('DOCKER_CONTAINER'):
-        return 'mysql'
-    return 'localhost'
+def _required_env(name: str) -> str:
+    value = (os.getenv(name) or "").strip()
+    if not value:
+        raise RuntimeError(f"{name} must be set for the qcyber_api MySQL connection")
+    return value
 
 
 def get_db_connection():
-    """Cria e retorna uma nova conexão com o banco para cada requisição.
-    Usa variáveis de ambiente com fallbacks robustos e ignora valores vazios.
-    """
-    # Evita valores vazios vindos do .env (e.g., MYSQL_USER="")
-    db_host = _resolve_mysql_host()
-    db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
-    db_pass = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQL_ROOT_PASSWORD') or ''
-    db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
+    """Cria uma conexão com o banco mantido pelo qcyber_api."""
+    db_host = _required_env("MYSQL_HOST")
+    db_port = int(_required_env("MYSQL_PORT"))
+    db_user = _required_env("MYSQL_USER")
+    db_pass = _required_env("MYSQL_PASSWORD")
+    db_name = _required_env("MYSQL_DATABASE")
 
     return pymysql.connect(
         host=db_host,
+        port=db_port,
         user=db_user,
         password=db_pass,
         database=db_name,
@@ -280,14 +265,6 @@ def analisar_pacote():
     incident_plan = ""
     print(f"[{req_id}] device_id={device_id} | features_tipo={type(features)} | samples_tipo={type(samples_payload)}", flush=True)
     
-    # Garante estrutura mínima do banco de dados
-    try:
-        if not ensure_bootstrap():
-            print(f"[{req_id}] ❌ Falha ao garantir estrutura do banco.", flush=True)
-            return jsonify({"error": "Falha ao preparar banco de dados."}), 500
-    except Exception as e:
-        print(f"[{req_id}] ⚠️ Erro ao tentar bootstrap do banco: {e}", flush=True)
-
     try:
         # 2. Prepara os dados para a crewai
         if samples_payload and isinstance(samples_payload, list):
@@ -428,11 +405,12 @@ def analisar_pacote():
 
         # 4. Salva a detecção no banco de dados
         try:
-            # Mostra os valores efetivos (com fallbacks) sem expor senha
-            _db_host = os.getenv('MYSQL_HOST') or 'mysql'
-            _db_user = os.getenv('MYSQL_USER') or os.getenv('MYSQL_USERNAME') or 'root'
-            _db_name = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQL_DATABASE') or 'qcyber_db'
-            print(f"[{req_id}] [DB] Conectando ao MySQL host={_db_host} user={_db_user} db={_db_name}", flush=True)
+            # Mostra os valores efetivos sem expor senha.
+            _db_host = _required_env("MYSQL_HOST")
+            _db_port = int(_required_env("MYSQL_PORT"))
+            _db_user = _required_env("MYSQL_USER")
+            _db_name = _required_env("MYSQL_DATABASE")
+            print(f"[{req_id}] [DB] Conectando ao MySQL host={_db_host} port={_db_port} user={_db_user} db={_db_name}", flush=True)
         except Exception:
             pass
 

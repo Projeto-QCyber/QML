@@ -3,7 +3,7 @@
 Este guia mostra como executar o projeto em dois modos:
 
 1. Pelo terminal, para testar o workflow multiagente diretamente.
-2. Como sistema completo, com API Flask, MySQL e Ollama via Docker Compose.
+2. Como sistema completo, com API Flask, Ollama via Docker Compose e banco MySQL mantido pelo `qcyber_api`.
 
 O `README.md` original continua sendo o guia curto de setup. Este arquivo e uma versao mais operacional, pensada para rodar, validar logs, entender o fluxo e depurar latencia.
 
@@ -38,6 +38,7 @@ Na maquina local:
 - Python 3.12.
 - `uv`.
 - Docker e Docker Compose, se for subir o sistema completo.
+- MySQL do projeto `qcyber_api` ja inicializado e acessivel pela rede.
 - Ollama, se for rodar LLM local fora do Docker.
 - Pesos/modelos tradicionais em `IA/weights/traditional`.
 - Dataset de teste em `data/test/dados_de_teste.csv`.
@@ -75,12 +76,11 @@ sudo apt install python3-dev default-libmysqlclient-dev build-essential pkg-conf
 Crie um arquivo `.env` na raiz do projeto:
 
 ```env
-MYSQL_HOST=localhost
+MYSQL_HOST=host.docker.internal
 MYSQL_PORT=50000
-MYSQL_ROOT_PASSWORD=root
 MYSQL_DATABASE=qcyber_db
-MYSQL_USER=
-MYSQL_PASSWORD=
+MYSQL_USER=tester
+MYSQL_PASSWORD=password
 
 FLASK_API_PORT=5000
 APP_SECRET_KEY=troque-este-valor
@@ -118,6 +118,14 @@ Notas:
 - `QCYBER_CREW_VERBOSE=0` reduz ruido no backend.
 - `QCYBER_ALLOW_CREW_FALLBACK=1` mantem o pipeline rodando com o modelo probabilistico quando algum LLM local falhar.
 - `QCYBER_USE_*_CREW=0` impede que uma Crew especifica seja iniciada.
+
+Notas de banco:
+
+- O QML nao cria, recria, migra nem popula o schema do MySQL.
+- O banco oficial e o MySQL do repositorio `qcyber_api`.
+- Quando o QML roda em Docker e acessa a porta publicada pelo `qcyber_api`, use `MYSQL_HOST=host.docker.internal` e `MYSQL_PORT` igual a porta publicada pelo MySQL do `qcyber_api`.
+- Quando o QML roda no host, use `MYSQL_HOST=127.0.0.1` e a mesma porta publicada pelo `qcyber_api`.
+- Se ambos os containers estiverem na mesma rede Docker, tambem e possivel usar o host/porta internos do servico MySQL do `qcyber_api`, por exemplo `MYSQL_HOST=mysql` e `MYSQL_PORT=3306`.
 - Em `QCYBER_ENV=TEST`, as Crews ficam desligadas por padrao, a menos que voce defina `QCYBER_USE_*_CREW=1`.
 - `QCYBER_MULTICLASS_ACCEPT_CONFIDENCE` aceita diretamente a classe do RF quando a confiança multiclasse e alta.
 - `QCYBER_MULTICLASS_TOP_K` limita quantos especialistas candidatos podem ser chamados quando a amostra esta ambigua.
@@ -227,11 +235,12 @@ Nao e necessario rodar um `response.py` separado. A resposta a incidente ja e ch
 
 ## Subindo o sistema completo com Docker
 
-O `docker-compose.yml` sobe tres servicos:
+O `docker-compose.yml` sobe os servicos do QML, mas nao sobe MySQL. O banco deve estar no `qcyber_api`.
 
-- `mysql`: banco de dados.
 - `ollama`: servidor local de modelos.
 - `flask-api`: API do QCyber.
+
+Antes de iniciar o QML, suba o MySQL pelo repositorio `qcyber_api` e confirme que `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` e `MYSQL_DATABASE` apontam para esse banco.
 
 Suba tudo:
 
@@ -264,12 +273,6 @@ Logs do Ollama:
 docker compose logs -f ollama
 ```
 
-Logs do MySQL:
-
-```bash
-docker compose logs -f mysql
-```
-
 Parar o sistema:
 
 ```bash
@@ -282,7 +285,7 @@ Parar e remover volumes nomeados criados pelo Compose:
 docker compose down -v
 ```
 
-Os dados deste projeto usam diretorios bindados, como `./mysql_volume` e `./ollama`. Portanto, `docker compose down -v` nao deve apagar esses diretorios automaticamente. Para resetar completamente banco ou modelos, remova esses diretorios manualmente apenas quando tiver certeza.
+O QML nao possui volume de MySQL. Dados de banco pertencem ao `qcyber_api`. O diretorio `./ollama` continua sendo bindado quando o perfil do Ollama for usado.
 
 ## API Flask
 
@@ -386,18 +389,22 @@ A resposta deve vir em JSON com mensagem, comandos sugeridos, riscos, rollback e
 
 ## Banco de dados
 
-No Docker, o banco sobe com o servico `mysql`.
+O banco de dados do QML e o MySQL mantido pelo repositorio `qcyber_api`.
 
-O entrypoint da API executa o bootstrap automaticamente:
+Este repositorio nao deve executar bootstrap, `CREATE DATABASE`, `DROP DATABASE`, migracoes ou scripts de carga de schema. A API apenas se conecta usando variaveis de ambiente e grava os dados da deteccao nas tabelas existentes.
 
 ```text
-qml.api.create_qcyber_db.ensure_bootstrap()
+MYSQL_HOST
+MYSQL_PORT
+MYSQL_DATABASE
+MYSQL_USER
+MYSQL_PASSWORD
 ```
 
-Para conectar no MySQL do host:
+Para conectar manualmente no MySQL do `qcyber_api`, use o container/porta desse repositorio. Exemplo quando o container se chama `qcyber_mysql`:
 
 ```bash
-docker exec -it qcyber_mysql mysql -uroot -proot qcyber_db
+docker exec -it qcyber_mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"
 ```
 
 Listar tabelas:
@@ -542,7 +549,7 @@ As causas mais comuns sao:
 - Modelo grande demais para a maquina.
 - Crew multiclasse chamando muitos agentes.
 - SHAP em modo completo.
-- MySQL ainda inicializando.
+- MySQL do `qcyber_api` inacessivel pelas variaveis `MYSQL_HOST`/`MYSQL_PORT`.
 
 ### `Invalid response from LLM call - None or empty`
 

@@ -20,11 +20,11 @@ INTERVALO_DE_TEMPO = 10
 
 # Configurações do banco de dados MySQL
 DB_CONFIG = {
-    'host': get_env_var('APP_MYSQL_HOST'),
-    'port': get_env_var('APP_MYSQL_PORT'),
-    'user': get_env_var('APP_MYSQL_USER'),
-    'password': get_env_var('MYSQL_ROOT_PASSWORD'),
-    'database': get_env_var('APP_MYSQL_DATABASE')
+    'host': get_env_var('MYSQL_HOST'),
+    'port': get_env_var('MYSQL_PORT'),
+    'user': get_env_var('MYSQL_USER'),
+    'password': get_env_var('MYSQL_PASSWORD'),
+    'database': get_env_var('MYSQL_DATABASE')
 }
 
 # Lista de dados para simular a leitura em intervalos.
