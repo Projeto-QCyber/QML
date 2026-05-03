@@ -40,6 +40,7 @@ Na maquina local:
 - Docker e Docker Compose, se for subir o sistema completo.
 - MySQL do projeto `qcyber_api` ja inicializado e acessivel pela rede.
 - Ollama, se for rodar LLM local fora do Docker.
+- [Nvidia Container Tookit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) para ollama com docker.
 - Pesos/modelos tradicionais em `IA/weights/traditional`.
 - Dataset de teste em `data/test/dados_de_teste.csv`.
 
@@ -73,47 +74,14 @@ sudo apt install python3-dev default-libmysqlclient-dev build-essential pkg-conf
 
 ## Arquivo `.env`
 
-Crie um arquivo `.env` na raiz do projeto:
+Crie um arquivo `.env` na raiz do projeto. Use o arquivo [.env.example](.env.example) como base.
 
-```env
-MYSQL_HOST=host.docker.internal
-MYSQL_PORT=50000
-MYSQL_DATABASE=qcyber_db
-MYSQL_USER=tester
-MYSQL_PASSWORD=password
-
-FLASK_API_PORT=5000
-APP_SECRET_KEY=troque-este-valor
-
-QCYBER_ENV=DEV
-QCYBER_CREW_VERBOSE=0
-QCYBER_ALLOW_CREW_FALLBACK=1
-QCYBER_USE_BINARY_CREW=1
-QCYBER_USE_MULTICLASS_CREW=1
-QCYBER_USE_INCIDENT_RESPONSE_CREW=1
-QCYBER_USE_REMEDIATION_CREW=1
-QCYBER_BINARY_MIN_CONFIDENCE=0.60
-QCYBER_MULTICLASS_MIN_CONFIDENCE=0.55
-QCYBER_MULTICLASS_ACCEPT_CONFIDENCE=0.80
-QCYBER_MULTICLASS_TOP_K=3
-
-LLM_MODEL_DEV_LLM_DEFAULT=ollama/qwen3:3b-q4_K_M
-LLM_MODEL_DEV_LLM_LEADER=ollama/qwen3:8b-q4_K_M
-LLM_MODEL_DEV_LLM_CODER=ollama/qwen3-coder:latest
-QML_CODER_MODEL=ollama/qwen3-coder:latest
-
-MAX_TOKENS_DEV_LLM_DEFAULT=256
-MAX_TOKENS_DEV_LLM_LEADER=512
-MAX_TOKENS_DEV_LLM_CODER=1024
-
-QCYBER_SHAP_MODE=fast
-```
 
 Notas:
 
 - Em `TEST`, o sistema usa modelos menores por padrao.
 - Em `DEV`, o sistema usa configuracoes equilibradas para desenvolvimento.
-- Em `PROD`, configure explicitamente os modelos `LLM_MODEL_PROD_*`.
+- Em `PROD`, configure explicitamente os modelos `LLM_MODEL_PROD*`.
 - `QCYBER_CREW_VERBOSE=1` mostra logs completos da CrewAI.
 - `QCYBER_CREW_VERBOSE=0` reduz ruido no backend.
 - `QCYBER_ALLOW_CREW_FALLBACK=1` mantem o pipeline rodando com o modelo probabilistico quando algum LLM local falhar.
@@ -123,7 +91,7 @@ Notas de banco:
 
 - O QML nao cria, recria, migra nem popula o schema do MySQL.
 - O banco oficial e o MySQL do repositorio `qcyber_api`.
-- Quando o QML roda em Docker e acessa a porta publicada pelo `qcyber_api`, use `MYSQL_HOST=host.docker.internal` e `MYSQL_PORT` igual a porta publicada pelo MySQL do `qcyber_api`.
+- Quando o QML roda em Docker e acessa a porta publicada pelo `qcyber_api`, use `MYSQL_HOST=mysql` e `MYSQL_PORT=3306`.
 - Quando o QML roda no host, use `MYSQL_HOST=127.0.0.1` e a mesma porta publicada pelo `qcyber_api`.
 - Se ambos os containers estiverem na mesma rede Docker, tambem e possivel usar o host/porta internos do servico MySQL do `qcyber_api`, por exemplo `MYSQL_HOST=mysql` e `MYSQL_PORT=3306`.
 - Em `QCYBER_ENV=TEST`, as Crews ficam desligadas por padrao, a menos que voce defina `QCYBER_USE_*_CREW=1`.
@@ -147,6 +115,15 @@ ollama pull qwen3:8b-q4_K_M
 ollama pull qwen3-coder:latest
 ```
 
+Com docker:
+```bash
+docker exec -it [qcyber_ollama | qcyber_prod_ollama] \
+ollama pull qwen3:3b-q4_K_M &&
+ollama pull qwen3:8b-q4_K_M && \
+ollama pull qwen3-coder:latest
+```
+
+
 Se algum nome de modelo nao existir na sua instalacao do Ollama, ajuste o `.env` para um tag disponivel localmente.
 
 Para verificar os modelos instalados:
@@ -159,11 +136,7 @@ ollama list
 
 Use este modo para testar o workflow multiagente sem subir a API.
 
-Entre na raiz do projeto:
-
-```bash
-cd "/mnt/data/Area de trabalho/Faculdade/BioData/QCyber/QML"
-```
+Entre na raiz do projeto;
 
 Execute o fluxo principal:
 

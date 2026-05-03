@@ -1,19 +1,26 @@
 #### PROTOTIPO PARA SIMULAR A CAPTURA DO DADOS E ENVIO PARA ANALISE
 
 import requests
+import sys
 import json
 import time
+import os
 import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
-from utils import get_env_var
+from pathlib import Path
 
+file_path = Path(__file__).resolve()
+root_dir = file_path.parents[1]
+sys.path.append(str(root_dir))
+
+from src.qml.utils.generic import get_env_var
 
 load_dotenv()
 # --- 1. CONFIGURAÇÕES ---
 
 # URL do endpoint da nossa API Flask de predição
-API_URL = "http://127.0.0.1:5000/api-quantum/predict"
+API_URL = f"http://127.0.0.1:{get_env_var('FLASK_API_PORT', 5000)}/api-quantum/predict"
 
 # Intervalo de tempo entre as análises (em segundos)
 INTERVALO_DE_TEMPO = 10
