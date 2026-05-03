@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = f"http://localhost:{os.getenv('FLASK_API_PORT', 5000)}/analisar"
-MINUTES = 30
+API_URL = f"http://127.0.0.1:{os.getenv('FLASK_API_PORT', 8016)}/analisar"
+MINUTES = 5
 
 # 1. Carregamos o CSV apenas uma vez (fora do loop) para economizar recursos
 print("Carregando base de dados...")

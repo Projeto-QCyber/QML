@@ -8,7 +8,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${FLASK_API_PORT:?error}:5000"
+      - "${FLASK_API_PORT:?error}:${FLASK_API_PORT}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
